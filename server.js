@@ -25,7 +25,7 @@ const server = http.createServer((req, res) => {
         '.png': 'image/png',
         '.jpg': 'image/jpg',
         '.gif': 'image/gif',
-        '.ico': 'image/x-icon'
+        '.ico': 'image/x-icon',
         '.mp3': 'audio/mpeg'
     };
 
