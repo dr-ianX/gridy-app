@@ -80,7 +80,7 @@ wss.on('connection', (socket, req) => {
     // Enviar estado actual al nuevo usuario
     socket.send(JSON.stringify({
         type: 'welcome',
-        message: 'Bienvenido a Gridy 🌟',
+        message: 'Bienvenido a MESH TCSACM 🌟',
         posts: state.posts.slice(0, 100) // Solo últimos 100 posts
     }));
 
@@ -217,7 +217,7 @@ function broadcast(message) {
 
 const PORT = process.env.PORT || 8000;
 server.listen(PORT, () => {
-    console.log(`🚀 Servidor Gridy ejecutándose en http://localhost:${PORT}`);
+    console.log(`🚀 Servidor MESH ejecutándose en http://localhost:${PORT}`);
     console.log('💾 Datos en memoria - Se pierden al reiniciar');
     console.log('🌐 Abre múltiples navegadores/pestañas para probar!');
 });
