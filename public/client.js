@@ -6,6 +6,7 @@ class GridyClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentPost = null;
+        this.musicPlayer = new MusicPlayer(); // 🎵 NUEVA LÍNEA
         
         this.init();
     }
@@ -17,6 +18,7 @@ class GridyClient {
         this.connect();
         this.loadTheme(); // Cargar tema al iniciar
         this.startVisualDecay();
+        this.musicPlayer.init(); // 🎵 NUEVA LÍNEA
     }
     
     loadUser() {
@@ -555,6 +557,82 @@ setupReactionEvents() {
         if (hasChanges) {
             this.renderGrid();
         }
+    }
+}
+
+// 🎵 REPRODUCTOR DE MÚSICA COMUNAL
+class MusicPlayer {
+    constructor() {
+        this.tracks = [
+            { name: "🎵 Canción 1", file: "music/track1.mp3" },
+            { name: "🎵 Canción 2", file: "music/track2.mp3" },
+            // Agrega aquí más tracks - MÁXIMO 10
+            // Formato: { name: "Nombre canción", file: "music/tu-archivo.mp3" }
+        ];
+        this.isPlaying = false;
+        this.currentAudio = null;
+    }
+
+    init() {
+        this.createPlayerUI();
+    }
+
+    createPlayerUI() {
+        const playerHTML = `
+            <div class="music-player">
+                <button id="musicToggle">🎵</button>
+                <span id="nowPlaying">Música comunal</span>
+                <button id="nextTrack">⏭️</button>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', playerHTML);
+
+        document.getElementById('musicToggle').addEventListener('click', () => this.togglePlay());
+        document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
+    }
+
+    togglePlay() {
+        if (this.isPlaying) {
+            this.stop();
+        } else {
+            this.playRandom();
+        }
+    }
+
+    playRandom() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+        }
+
+        const randomTrack = this.tracks[Math.floor(Math.random() * this.tracks.length)];
+        this.currentAudio = new Audio(randomTrack.file);
+        
+        this.currentAudio.play().then(() => {
+            this.isPlaying = true;
+            document.getElementById('musicToggle').textContent = '⏸️';
+            document.getElementById('nowPlaying').textContent = randomTrack.name;
+        }).catch(error => {
+            console.log('Reproducción automática bloqueada:', error);
+            document.getElementById('nowPlaying').textContent = "Click en 🎵 para reproducir";
+        });
+
+        this.currentAudio.addEventListener('ended', () => {
+            setTimeout(() => this.nextTrack(), 2000);
+        });
+    }
+
+    nextTrack() {
+        this.playRandom();
+    }
+
+    stop() {
+        if (this.currentAudio) {
+            this.currentAudio.pause();
+            this.currentAudio.currentTime = 0;
+        }
+        this.isPlaying = false;
+        document.getElementById('musicToggle').textContent = '🎵';
+        document.getElementById('nowPlaying').textContent = 'Música pausada';
     }
 }
 
