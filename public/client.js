@@ -203,7 +203,7 @@ class GridyClient {
         if (this.posts.length === 0) {
             gridContainer.innerHTML = `
                 <div class="loading">
-                    <h3>¡Bienvenido a Gridy! 🌟</h3>
+                    <h3>¡Bienvenido al MESH de TCSACM! 🌟</h3>
                     <p>Se el primero en publicar haciendo doble click en cualquier lugar</p>
                     <p>O usa el botón naranja en la esquina inferior derecha</p>
                 </div>
@@ -440,6 +440,6 @@ class GridyClient {
 
 // Inicializar la aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🎮 Gridy iniciando...');
+    console.log('🎮 MESH iniciando...');
     window.gridyApp = new GridyClient();
 });
