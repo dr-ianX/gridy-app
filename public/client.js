@@ -11,12 +11,11 @@ class GridyClient {
     }
     
     init() {
-        console.log('🚀 Iniciando Gridy Client...');
+        console.log('🚀 Iniciando MESH TCSACM Client...');
         this.loadUser();
         this.setupEventListeners();
         this.connect();
-        
-        // Iniciar sistema de decaimiento visual
+        this.loadTheme(); // Cargar tema al iniciar
         this.startVisualDecay();
     }
     
@@ -85,6 +84,34 @@ class GridyClient {
         console.log('✅ Eventos configurados');
     }
     
+    // 🎨 TEMA NOCTURNO
+    loadTheme() {
+        const savedTheme = localStorage.getItem('gridy_theme');
+        if (savedTheme === 'night') {
+            document.body.classList.add('night-mode');
+        }
+        this.createThemeToggle();
+    }
+
+    createThemeToggle() {
+        const toggleBtn = document.createElement('button');
+        toggleBtn.innerHTML = '🌙';
+        toggleBtn.className = 'theme-toggle';
+        toggleBtn.title = 'Cambiar tema';
+        toggleBtn.onclick = () => this.toggleTheme();
+        document.body.appendChild(toggleBtn);
+    }
+
+    toggleTheme() {
+        document.body.classList.toggle('night-mode');
+        const isNightMode = document.body.classList.contains('night-mode');
+        localStorage.setItem('gridy_theme', isNightMode ? 'night' : 'day');
+        
+        // Cambiar el emoji del botón
+        const toggleBtn = document.querySelector('.theme-toggle');
+        toggleBtn.innerHTML = isNightMode ? '☀️' : '🌙';
+    }
+    
     saveUserNickname() {
         const nickname = document.getElementById('nicknameInput').value.trim();
         if (nickname && nickname.length >= 2) {
@@ -111,7 +138,7 @@ class GridyClient {
             this.socket = new WebSocket(wsUrl);
             
             this.socket.onopen = () => {
-                console.log('✅ Conectado a Gridy');
+                console.log('✅ Conectado a MESH TCSACM');
                 this.reconnectAttempts = 0;
                 this.updateStatus('Conectado 🌐');
             };
@@ -204,7 +231,7 @@ class GridyClient {
             gridContainer.innerHTML = `
                 <div class="loading">
                     <h3>¡Bienvenido al MESH de TCSACM! 🌟</h3>
-                    <p>Se el primero en publicar haciendo doble click en cualquier lugar</p>
+                    <p>Sé el primero en publicar haciendo doble click en cualquier lugar</p>
                     <p>O usa el botón naranja en la esquina inferior derecha</p>
                 </div>
             `;
@@ -256,10 +283,37 @@ class GridyClient {
             <div class="user-avatar">${this.getUserAvatar(post.user)}</div>
             <div class="user-name">${post.user}</div>
             <div class="post-content">${post.content}</div>
+            ${this.addQuickReactions(post)}
         `;
         
         cell.addEventListener('click', () => this.openPostModal(post));
         return cell;
+    }
+    
+    // 🎉 REACCIONES RÁPIDAS
+    addQuickReactions(post) {
+        const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
+        return `
+            <div class="quick-reactions">
+                ${reactions.map(reaction => 
+                    `<span class="reaction" onclick="gridyApp.sendReaction('${post.id}', '${reaction}')">${reaction}</span>`
+                ).join('')}
+            </div>
+        `;
+    }
+
+    sendReaction(postId, reaction) {
+        // Detener la propagación del evento para que no abra el modal
+        event.stopPropagation();
+        
+        if (this.socket?.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify({
+                type: 'new_comment',  // Reutilizamos el sistema de comentarios
+                postId: postId,
+                user: this.currentUser,
+                text: reaction
+            }));
+        }
     }
     
     getUserAvatar(username) {
