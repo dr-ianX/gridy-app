@@ -227,6 +227,9 @@ class GridyClient {
         if (!gridContainer) return;
         
         gridContainer.innerHTML = '';
+
+        // Configurar eventos de reacciones después de renderizar
+        this.setupReactionEvents();
         
         if (this.posts.length === 0) {
             gridContainer.innerHTML = `
@@ -295,9 +298,9 @@ class GridyClient {
     addQuickReactions(post) {
         const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
         return `
-            <div class="quick-reactions">
+            <div class="quick-reactions" data-postid="${post.id}">
                 ${reactions.map(reaction => 
-                    `<span class="reaction" onclick="gridyApp.sendReaction('${post.id}', '${reaction}')">${reaction}</span>`
+                    `<span class="reaction" data-reaction="${reaction}">${reaction}</span>`
                 ).join('')}
             </div>
         `;
@@ -469,6 +472,29 @@ class GridyClient {
             }
         });
     }
+
+    // 🎯 CONFIGURAR EVENTOS DE REACCIONES DESPUÉS DE RENDERIZAR
+setupReactionEvents() {
+    // Esperar un momento para que el DOM se actualice
+    setTimeout(() => {
+        const reactionElements = document.querySelectorAll('.reaction');
+        reactionElements.forEach(reactionEl => {
+            // Remover event listeners antiguos para evitar duplicados
+            reactionEl.replaceWith(reactionEl.cloneNode(true));
+        });
+
+        // Agregar nuevos event listeners
+        const newReactionElements = document.querySelectorAll('.reaction');
+        newReactionElements.forEach(reactionEl => {
+            reactionEl.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const reaction = reactionEl.getAttribute('data-reaction');
+                const postId = reactionEl.closest('.quick-reactions').getAttribute('data-postid');
+                this.sendReaction(postId, reaction);
+            });
+        });
+    }, 100);
+}
 
     // Sistema de decaimiento visual (como Bejeweled)
     startVisualDecay() {
