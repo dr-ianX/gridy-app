@@ -332,3 +332,34 @@ body {
         font-size: 24px;
     }
 }
+
+/* Agregar al FINAL de styles.css */
+.night-mode {
+    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+}
+
+.night-mode .post-cell {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.night-mode .modal-content {
+    background: #2c3e50;
+    color: white;
+}
+
+/* Toggle button */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 20px;
+    z-index: 1000;
+    backdrop-filter: blur(10px);
+}
