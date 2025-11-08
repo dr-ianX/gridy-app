@@ -40,10 +40,10 @@ const server = http.createServer((req, res) => {
                 res.end('Error del servidor: '+error.code);
             }
         } else {
-            // 🛡️ CSP MUY PERMISIVO - ELIMINAR BLOQUEOS
+            // 🚨 ELIMINAR CSP COMPLETAMENTE - SOLO CONTENT TYPE
             res.writeHead(200, { 
                 'Content-Type': contentType
-                // ⚠️ NO MANDAR CSP - Render ya tiene uno por defecto
+                // ⚠️ NO MANDAR CSP - Dejar que el navegador use política por defecto
             });
             res.end(content, 'utf-8');
         }
