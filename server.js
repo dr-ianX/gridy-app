@@ -12,13 +12,12 @@ const removeCSP = (req, res, next) => {
     next();
 };
 
-// Crear servidor HTTP para servir archivos estáticos
 const server = http.createServer((req, res) => {
+    // 🛡️ APLICAR REMOCIÓN DE CSP
     removeCSP(req, res, () => {
-        // Servir archivos estáticos desde la carpeta 'public'
         let filePath = req.url === '/' ? '/index.html' : req.url;
         filePath = path.join(__dirname, 'public', filePath);
-
+        
         const extname = String(path.extname(filePath)).toLowerCase();
         const mimeTypes = {
             '.html': 'text/html',
@@ -31,22 +30,26 @@ const server = http.createServer((req, res) => {
             '.ico': 'image/x-icon'
         };
 
-    const contentType = mimeTypes[extname] || 'application/octet-stream';
+        const contentType = mimeTypes[extname] || 'application/octet-stream';
 
-    fs.readFile(filePath, (error, content) => {
-        if (error) {
-            if(error.code == 'ENOENT') {
-                res.writeHead(404);
-                res.end('Archivo no encontrado');
+        fs.readFile(filePath, (error, content) => {
+            if (error) {
+                if(error.code == 'ENOENT') {
+                    res.writeHead(404);
+                    res.end('Archivo no encontrado');
+                } else {
+                    res.writeHead(500);
+                    res.end('Error del servidor: '+error.code);
+                }
             } else {
-                res.writeHead(500);
-                res.end('Error del servidor: '+error.code);
+                res.writeHead(200, { 
+                    'Content-Type': contentType,
+                    // 🛡️ AGREGAR CSP PERMISIVO EXPLÍCITAMENTE
+                    'Content-Security-Policy': "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data:;"
+                });
+                res.end(content, 'utf-8');
             }
-        } else {
-            res.writeHead(200, { 'Content-Type': contentType });
-            res.end(content, 'utf-8');
-        }
-    });
+        });
     });
 });
 

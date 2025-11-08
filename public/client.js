@@ -228,9 +228,7 @@ class GridyClient {
         
         gridContainer.innerHTML = '';
 
-        // Configurar eventos de reacciones después de renderizar
-        this.setupReactionEvents();
-        
+
         if (this.posts.length === 0) {
             gridContainer.innerHTML = `
                 <div class="loading">
@@ -266,6 +264,11 @@ class GridyClient {
             
             gridContainer.appendChild(column);
         });
+
+        // 🎯 CONFIGURAR REACCIONES DESPUÉS DE RENDERIZAR
+        setTimeout(() => {
+            this.setupReactionEvents();
+        }, 100);
     }
     
     createPostCell(post) {
@@ -294,31 +297,60 @@ class GridyClient {
         return cell;
     }
     
-    // 🎉 REACCIONES RÁPIDAS - FUNCIONES NUEVAS
+    // 🎉 REACCIONES RÁPIDAS - VERSIÓN CORREGIDA
     addQuickReactions(post) {
         const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
+        const reactionsHTML = reactions.map(reaction => 
+            `<span class="reaction" data-reaction="${reaction}">${reaction}</span>`
+        ).join('');
+    
         return `
             <div class="quick-reactions" data-postid="${post.id}">
-                ${reactions.map(reaction => 
-                    `<span class="reaction" data-reaction="${reaction}">${reaction}</span>`
-                ).join('')}
+                ${reactionsHTML}
             </div>
         `;
     }
 
-    sendReaction(postId, reaction) {
-        // Usamos event global ya que viene del onclick
-        if (window.event) {
-            window.event.stopPropagation();
-        }
+    // 🎯 CONFIGURAR EVENTOS DE REACCIONES - VERSIÓN MEJORADA
+    setupReactionEvents() {
+        const reactionElements = document.querySelectorAll('.reaction');
+    
+        reactionElements.forEach(reactionEl => {
+            // Remover event listeners existentes para evitar duplicados
+            const newReactionEl = reactionEl.cloneNode(true);
+            reactionEl.parentNode.replaceChild(newReactionEl, reactionEl);
         
+            // Agregar nuevo event listener
+            newReactionEl.addEventListener('click', (event) => {
+                event.stopPropagation();
+                const reaction = newReactionEl.getAttribute('data-reaction');
+                const postId = newReactionEl.closest('.quick-reactions').getAttribute('data-postid');
+            
+                console.log('🎯 Enviando reacción:', reaction, 'para post:', postId);
+                this.sendReaction(postId, reaction);
+            });
+        });
+    }
+
+    // 📤 ENVIAR REACCIÓN - VERSIÓN MEJORADA
+    sendReaction(postId, reaction) {
+        console.log('🚀 Enviando reacción al servidor:', { postId, reaction });
+    
+        if (!postId) {
+            console.error('❌ Error: postId es undefined');
+            return;
+        }
+    
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
-                type: 'new_comment',  // Reutilizamos el sistema de comentarios
+                type: 'new_comment',
                 postId: postId,
                 user: this.currentUser,
                 text: reaction
             }));
+            console.log('✅ Reacción enviada correctamente');
+        } else {
+            console.error('❌ WebSocket no conectado');
         }
     }
     
