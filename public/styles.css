@@ -356,7 +356,7 @@ body {
 }
 
 .night-mode {
-    background: linear-gradient(135deg, #2c3e50 0%, #1e3c72 100%);
+    background: linear-gradient(135deg, #2c3e50 0%, #1e3c72 100%) !important;
 }
 
 .night-mode .post-cell {
@@ -370,6 +370,17 @@ body {
 
 .night-mode .interaction-count {
     background: rgba(255, 255, 255, 0.2);
+}
+
+.night-mode .modal-content {
+    background: #2c3e50;
+    color: white;
+}
+
+.night-mode .comment-item {
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
 /* 🎉 REACCIONES RÁPIDAS */
@@ -393,6 +404,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    user-select: none;
 }
 
 .reaction:hover {
@@ -406,4 +418,11 @@ body {
 
 .night-mode .reaction:hover {
     background: rgba(255, 255, 255, 0.25);
+}
+
+/* Efecto de pulso para nuevos posts */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
 }
