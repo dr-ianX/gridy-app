@@ -162,11 +162,16 @@ function handleNewPost(socket, data) {
 }
 
 function handleNewComment(socket, data) {
+    console.log('🔍 Buscando post con ID:', data.postId);
+    console.log('📝 Posts disponibles:', state.posts.map(p => ({ id: p.id, user: p.user })));
+    
     const post = state.posts.find(p => p.id === data.postId);
+    
     if (!post) {
+        console.error('❌ Post no encontrado. ID recibido:', data.postId);
         socket.send(JSON.stringify({
             type: 'error', 
-            message: 'El post no existe'
+            message: 'El post no existe - ID: ' + data.postId
         }));
         return;
     }
