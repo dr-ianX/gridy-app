@@ -1,0 +1,9 @@
+# Archivos que NO quieres subir a GitHub
+node_modules/
+npm-debug.log*
+.DS_Store
+.start-server.bat
+*.bat
+.env
+.env.local
+.env.production

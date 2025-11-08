@@ -1,0 +1,334 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    font-family: 'Arial', sans-serif;
+    padding: 20px;
+    overflow-x: hidden;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Grid Masonry */
+.masonry-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 20px;
+    justify-content: center;
+}
+
+.masonry-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    flex: 1;
+    min-width: 250px;
+    max-width: 400px;
+}
+
+.post-cell {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 15px;
+    padding: 20px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.4s ease;
+    animation: float 6s ease-in-out infinite;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    break-inside: avoid;
+    position: relative;
+    min-height: 120px;
+}
+
+.post-cell:hover {
+    transform: scale(1.03) translateY(-5px);
+    background: rgba(255, 255, 255, 0.25);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes float {
+    0%, 100% { 
+        transform: translateY(0px) rotate(0deg); 
+    }
+    33% { 
+        transform: translateY(-8px) rotate(0.5deg); 
+    }
+    66% { 
+        transform: translateY(4px) rotate(-0.3deg); 
+    }
+}
+
+.user-avatar {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+}
+
+.user-name {
+    font-size: 0.9em;
+    opacity: 0.9;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.post-content {
+    margin-top: 8px;
+    font-size: 1em;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.interaction-count {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 4px 8px;
+    font-size: 0.7em;
+    backdrop-filter: blur(5px);
+}
+
+/* Sistema de tamaños basado en interacciones */
+.post-cell.small {
+    min-height: 100px;
+    flex-grow: 1;
+}
+
+.post-cell.medium {
+    min-height: 150px;
+    flex-grow: 2;
+}
+
+.post-cell.large {
+    min-height: 200px;
+    flex-grow: 3;
+}
+
+.post-cell.xlarge {
+    min-height: 250px;
+    flex-grow: 4;
+}
+
+/* Botón flotante para publicar */
+.floating-publish-btn {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    font-size: 30px;
+    cursor: pointer;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.floating-publish-btn:hover {
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+}
+
+.floating-publish-btn:active {
+    transform: scale(0.95);
+}
+
+.plus-icon {
+    font-weight: bold;
+    transition: transform 0.3s ease;
+}
+
+/* Modales */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 20px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: modalAppear 0.3s ease;
+}
+
+@keyframes modalAppear {
+    from { opacity: 0; transform: scale(0.8) translateY(-20px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.publish-input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #764ba2;
+    border-radius: 10px;
+    margin: 15px 0;
+    font-size: 16px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.3s ease;
+}
+
+.publish-input:focus {
+    outline: none;
+    border-color: #5a3780;
+}
+
+.publish-note {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.comment-input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #764ba2;
+    border-radius: 10px;
+    margin: 15px 0;
+    font-size: 16px;
+    transition: border-color 0.3s ease;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: #5a3780;
+}
+
+.comment-btn {
+    background: #764ba2;
+    color: white;
+    border: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.comment-btn:hover {
+    background: #5a3780;
+    transform: translateY(-2px);
+}
+
+.comment-btn:active {
+    transform: translateY(0);
+}
+
+.comments-list {
+    margin-top: 20px;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.comment-item {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    color: #333;
+    background: #f8f9fa;
+    margin-bottom: 8px;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.close-btn {
+    float: right;
+    cursor: pointer;
+    font-size: 24px;
+    color: #764ba2;
+    transition: color 0.3s ease;
+}
+
+.close-btn:hover {
+    color: #5a3780;
+}
+
+/* Nickname setup */
+.nickname-modal {
+    display: flex;
+}
+
+.nickname-input {
+    width: 100%;
+    padding: 15px;
+    border: 2px solid #764ba2;
+    border-radius: 10px;
+    margin: 15px 0;
+    font-size: 16px;
+    text-align: center;
+    transition: border-color 0.3s ease;
+}
+
+.nickname-input:focus {
+    outline: none;
+    border-color: #5a3780;
+}
+
+/* Loading animation */
+.loading {
+    text-align: center;
+    color: white;
+    font-size: 1.2em;
+    padding: 40px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .masonry-column {
+        min-width: 100%;
+    }
+    
+    .post-cell {
+        min-height: 100px;
+    }
+    
+    .floating-publish-btn {
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        font-size: 24px;
+    }
+}

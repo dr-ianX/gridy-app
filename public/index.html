@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- QUITAMOS CUALQUIER CSP QUE ESTÉ BLOQUEANDO -->
+    <title>Gridy - Tu red social minimalista</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="masonry-grid" id="gridContainer">
+            <div class="loading">Conectando a Gridy... 🌟</div>
+        </div>
+    </div>
+
+    <!-- Botón flotante para publicar -->
+    <button class="floating-publish-btn" id="publishBtn" title="Crear publicación">
+        <span class="plus-icon">+</span>
+    </button>
+
+    <!-- Modal para comentarios -->
+    <div class="modal" id="commentModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closeModal">&times;</span>
+            <h3 id="postTitle">Comentarios de </h3>
+            <div class="post-content-modal" id="postContent"></div>
+            <input type="text" class="comment-input" id="commentInput" placeholder="Escribe un comentario o emoji 🎉" maxlength="200">
+            <button class="comment-btn" id="submitComment">Comentar</button>
+            <div class="comments-list" id="commentsList"></div>
+        </div>
+    </div>
+
+    <!-- Modal para crear publicación -->
+    <div class="modal" id="publishModal">
+        <div class="modal-content">
+            <span class="close-btn" id="closePublishBtn">&times;</span>
+            <h3>¿Qué quieres compartir hoy? 🌟</h3>
+            <p class="publish-note">Solo 1 publicación por día - hoy puedes publicar</p>
+            <textarea class="publish-input" id="publishInput" placeholder="Comparte algo con tu malla..." maxlength="280" rows="4"></textarea>
+            <button class="comment-btn" id="submitPublish">Publicar</button>
+        </div>
+    </div>
+
+    <!-- Modal para crear nickname -->
+    <div class="modal nickname-modal" id="nicknameModal">
+        <div class="modal-content">
+            <h2>¡Bienvenido a Gridy! 🌟</h2>
+            <p>Elige tu nickname de por vida:</p>
+            <input type="text" class="nickname-input" id="nicknameInput" placeholder="Ej: CyberExplorer_92" maxlength="20">
+            <button class="comment-btn" id="saveNickname">Entrar a Gridy</button>
+        </div>
+    </div>
+
+    <!-- CAMBIAMOS script.js por client.js -->
+    <script src="client.js"></script>
+</body>
+</html>
