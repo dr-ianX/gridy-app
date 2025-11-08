@@ -333,22 +333,7 @@ body {
     }
 }
 
-/* Agregar al FINAL de styles.css */
-.night-mode {
-    background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
-}
-
-.night-mode .post-cell {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.night-mode .modal-content {
-    background: #2c3e50;
-    color: white;
-}
-
-/* Toggle button */
+/* 🎨 TEMA NOCTURNO */
 .theme-toggle {
     position: fixed;
     top: 20px;
@@ -356,10 +341,69 @@ body {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 50px;
+    height: 50px;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 24px;
     z-index: 1000;
     backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 0.3);
+}
+
+.night-mode {
+    background: linear-gradient(135deg, #2c3e50 0%, #1e3c72 100%);
+}
+
+.night-mode .post-cell {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.night-mode .post-cell:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.night-mode .interaction-count {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* 🎉 REACCIONES RÁPIDAS */
+.quick-reactions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.reaction {
+    cursor: pointer;
+    font-size: 1.2em;
+    padding: 5px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    background: rgba(255, 255, 255, 0.1);
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reaction:hover {
+    transform: scale(1.3);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.night-mode .reaction {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.night-mode .reaction:hover {
+    background: rgba(255, 255, 255, 0.25);
 }
