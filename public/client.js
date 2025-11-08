@@ -564,8 +564,8 @@ setupReactionEvents() {
 class MusicPlayer {
     constructor() {
         this.tracks = [
-            { name: "🎵 4 - dR.iAn.", file: "https://drive.google.com/uc?export=download&id=1i_r4j7oB1U_wJroNK_S3hFL3kW9r72zK" },
-            { name: "🎵 Me Reconozco - Rodrigo Escamilla", file: "https://drive.google.com/uc?export=download&id=1kw6Hjj4zEJUB1w4Kqwv0sti0RsfkdOJd" },
+            { name: "🎵 4 - dR.iAn.", file: "music/track1.mp3" },
+            { name: "🎵 Me Reconozco - Rodrigo Escamilla", file: "music/mereconozco.mp3" },
             // Agrega aquí más tracks - MÁXIMO 10
             // Formato: { name: "Nombre canción", file: "music/tu-archivo.mp3" }
         ];
