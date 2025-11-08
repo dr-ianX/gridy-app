@@ -13,43 +13,40 @@ const removeCSP = (req, res, next) => {
 };
 
 const server = http.createServer((req, res) => {
-    // 🛡️ APLICAR REMOCIÓN DE CSP
-    removeCSP(req, res, () => {
-        let filePath = req.url === '/' ? '/index.html' : req.url;
-        filePath = path.join(__dirname, 'public', filePath);
-        
-        const extname = String(path.extname(filePath)).toLowerCase();
-        const mimeTypes = {
-            '.html': 'text/html',
-            '.js': 'text/javascript',
-            '.css': 'text/css',
-            '.json': 'application/json',
-            '.png': 'image/png',
-            '.jpg': 'image/jpg',
-            '.gif': 'image/gif',
-            '.ico': 'image/x-icon'
-        };
+    let filePath = req.url === '/' ? '/index.html' : req.url;
+    filePath = path.join(__dirname, 'public', filePath);
+    
+    const extname = String(path.extname(filePath)).toLowerCase();
+    const mimeTypes = {
+        '.html': 'text/html',
+        '.js': 'text/javascript',
+        '.css': 'text/css',
+        '.json': 'application/json',
+        '.png': 'image/png',
+        '.jpg': 'image/jpg',
+        '.gif': 'image/gif',
+        '.ico': 'image/x-icon'
+    };
 
-        const contentType = mimeTypes[extname] || 'application/octet-stream';
+    const contentType = mimeTypes[extname] || 'application/octet-stream';
 
-        fs.readFile(filePath, (error, content) => {
-            if (error) {
-                if(error.code == 'ENOENT') {
-                    res.writeHead(404);
-                    res.end('Archivo no encontrado');
-                } else {
-                    res.writeHead(500);
-                    res.end('Error del servidor: '+error.code);
-                }
+    fs.readFile(filePath, (error, content) => {
+        if (error) {
+            if(error.code == 'ENOENT') {
+                res.writeHead(404);
+                res.end('Archivo no encontrado');
             } else {
-                res.writeHead(200, { 
-                    'Content-Type': contentType,
-                    // 🛡️ AGREGAR CSP PERMISIVO EXPLÍCITAMENTE
-                    'Content-Security-Policy': "default-src * 'unsafe-inline' 'unsafe-eval'; script-src * 'unsafe-inline' 'unsafe-eval'; connect-src * 'unsafe-inline'; img-src * data:;"
-                });
-                res.end(content, 'utf-8');
+                res.writeHead(500);
+                res.end('Error del servidor: '+error.code);
             }
-        });
+        } else {
+            // 🛡️ CSP MUY PERMISIVO - ELIMINAR BLOQUEOS
+            res.writeHead(200, { 
+                'Content-Type': contentType
+                // ⚠️ NO MANDAR CSP - Render ya tiene uno por defecto
+            });
+            res.end(content, 'utf-8');
+        }
     });
 });
 
@@ -141,14 +138,23 @@ function handleNewPost(socket, data) {
         return;
     }
 
+    // 🎯 GENERAR ID CONSISTENTE
+    const newPostId = Date.now().toString();
+    
     const newPost = {
-        id: Date.now() + Math.random(), // ID único
+        id: newPostId, // Usar solo Date.now() como string
         user: data.user,
         content: data.content,
         interactions: 0,
         comments: [],
         timestamp: Date.now()
     };
+    
+    console.log('📝 NUEVO POST CREADO:', {
+        id: newPost.id,
+        user: newPost.user,
+        content: newPost.content.substring(0, 50)
+    });
     
     state.posts.unshift(newPost);
     
@@ -157,21 +163,26 @@ function handleNewPost(socket, data) {
         type: 'new_post',
         post: newPost
     });
-    
-    console.log(`📝 Nuevo post de ${data.user}: ${data.content.substring(0, 30)}...`);
 }
 
 function handleNewComment(socket, data) {
-    console.log('🔍 Buscando post con ID:', data.postId);
-    console.log('📝 Posts disponibles:', state.posts.map(p => ({ id: p.id, user: p.user })));
+    console.log('🔍 BUSCANDO POST:');
+    console.log('   ID recibido:', data.postId);
+    console.log('   Tipo de ID:', typeof data.postId);
+    console.log('   Posts en memoria:', state.posts.length);
     
-    const post = state.posts.find(p => p.id === data.postId);
+    // Mostrar todos los IDs disponibles
+    state.posts.forEach((post, index) => {
+        console.log(`   Post ${index}: ID=${post.id}, User=${post.user}`);
+    });
+    
+    const post = state.posts.find(p => p.id == data.postId); // Usar == en lugar de === para comparación flexible
     
     if (!post) {
-        console.error('❌ Post no encontrado. ID recibido:', data.postId);
+        console.log('❌ POST NO ENCONTRADO - IDs disponibles:', state.posts.map(p => p.id));
         socket.send(JSON.stringify({
             type: 'error', 
-            message: 'El post no existe - ID: ' + data.postId
+            message: `El post no existe. ID: ${data.postId}`
         }));
         return;
     }

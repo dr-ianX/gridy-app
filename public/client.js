@@ -334,21 +334,23 @@ class GridyClient {
 
     // 📤 ENVIAR REACCIÓN - VERSIÓN MEJORADA
     sendReaction(postId, reaction) {
-        console.log('🚀 Enviando reacción al servidor:', { postId, reaction });
+        console.log('🚀 Enviando reacción:', { 
+            postId: postId, 
+            tipo: typeof postId,
+            reaction: reaction 
+        });
     
-        if (!postId) {
-            console.error('❌ Error: postId es undefined');
-            return;
-        }
+        // Asegurar que postId es string
+        const postIdStr = String(postId);
     
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
                 type: 'new_comment',
-                postId: postId,
+                postId: postIdStr, // Enviar como string
                 user: this.currentUser,
                 text: reaction
             }));
-            console.log('✅ Reacción enviada correctamente');
+            console.log('✅ Reacción enviada con ID:', postIdStr);
         } else {
             console.error('❌ WebSocket no conectado');
         }
