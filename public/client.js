@@ -100,8 +100,12 @@ class GridyClient {
     
     connect() {
         try {
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.hostname}:${window.location.port || 8000}`;
+            // 🎯 DETECTAMOS SI ESTAMOS EN LOCAL O EN PRODUCCIÓN
+            const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const protocol = isLocal ? 'ws:' : 'wss:';
+            const wsUrl = isLocal 
+                ? `${protocol}//${window.location.hostname}:${window.location.port || 8000}`
+                : `${protocol}//${window.location.host}`;
             
             console.log(`🔗 Conectando a: ${wsUrl}`);
             this.socket = new WebSocket(wsUrl);
