@@ -47,6 +47,7 @@ const server = http.createServer((req, res) => {
             res.end(content, 'utf-8');
         }
     });
+    });
 });
 
 // Inicializar WebSocket server
