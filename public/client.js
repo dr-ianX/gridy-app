@@ -294,14 +294,28 @@ class GridyClient {
     // 🎉 REACCIONES RÁPIDAS - FUNCIONES NUEVAS
     addQuickReactions(post) {
         const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
-        return `
-            <div class="quick-reactions">
-                ${reactions.map(reaction => 
-                    `<span class="reaction" onclick="gridyApp.sendReaction('${post.id}', '${reaction}')">${reaction}</span>`
-                ).join('')}
-            </div>
-        `;
-    }
+        const reactionsDiv = document.createElement('div');
+        reactionsDiv.className = 'quick-reactions';
+        
+        reactions.forEach(reaction => {
+        const reactionSpan = document.createElement('span');
+        reactionSpan.className = 'reaction';
+        reactionSpan.textContent = reaction;
+        // Usa un atributo de datos para guardar la reacción
+        reactionSpan.dataset.reaction = reaction;
+        reactionSpan.dataset.postId = post.id;
+        
+        reactionSpan.addEventListener('click', (event) => {
+            event.stopPropagation(); // Evita que el click active el modal del post
+            this.sendReaction(post.id, reaction);
+        });
+        
+        reactionsDiv.appendChild(reactionSpan);
+    });
+
+    return reactionsDiv;
+
+}
 
     sendReaction(postId, reaction) {
         // Usamos event global ya que viene del onclick
