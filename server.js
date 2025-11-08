@@ -2,24 +2,34 @@ const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+// Agregar esto al INICIO del server.js - después de los requires
+// Middleware para eliminar CSP de Render
+const removeCSP = (req, res, next) => {
+    // Remover cabeceras CSP que Render pueda estar agregando
+    res.removeHeader('Content-Security-Policy');
+    res.removeHeader('X-Content-Security-Policy');
+    res.removeHeader('X-WebKit-CSP');
+    next();
+};
 
 // Crear servidor HTTP para servir archivos estáticos
 const server = http.createServer((req, res) => {
-    // Servir archivos estáticos desde la carpeta 'public'
-    let filePath = req.url === '/' ? '/index.html' : req.url;
-    filePath = path.join(__dirname, 'public', filePath);
+    removeCSP(req, res, () => {
+        // Servir archivos estáticos desde la carpeta 'public'
+        let filePath = req.url === '/' ? '/index.html' : req.url;
+        filePath = path.join(__dirname, 'public', filePath);
 
-    const extname = String(path.extname(filePath)).toLowerCase();
-    const mimeTypes = {
-        '.html': 'text/html',
-        '.js': 'text/javascript',
-        '.css': 'text/css',
-        '.json': 'application/json',
-        '.png': 'image/png',
-        '.jpg': 'image/jpg',
-        '.gif': 'image/gif',
-        '.ico': 'image/x-icon'
-    };
+        const extname = String(path.extname(filePath)).toLowerCase();
+        const mimeTypes = {
+            '.html': 'text/html',
+            '.js': 'text/javascript',
+            '.css': 'text/css',
+            '.json': 'application/json',
+            '.png': 'image/png',
+            '.jpg': 'image/jpg',
+            '.gif': 'image/gif',
+            '.ico': 'image/x-icon'
+        };
 
     const contentType = mimeTypes[extname] || 'application/octet-stream';
 
