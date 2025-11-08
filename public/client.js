@@ -564,8 +564,8 @@ setupReactionEvents() {
 class MusicPlayer {
     constructor() {
         this.tracks = [
-            { name: "🎵 Canción 1", file: "music/track1.mp3" },
-            { name: "🎵 Canción 2", file: "music/track2.mp3" },
+            { name: "🎵 4 - dR.iAn.", file: "music/track1.mp3" },
+            { name: "🎵 Me Reconozco - Rodrigo Escamilla", file: "music/mereconozco.mp3" },
             // Agrega aquí más tracks - MÁXIMO 10
             // Formato: { name: "Nombre canción", file: "music/tu-archivo.mp3" }
         ];
@@ -604,22 +604,44 @@ class MusicPlayer {
             this.currentAudio.pause();
         }
 
+        // Verificar que hay tracks disponibles
+        if (this.tracks.length === 0) {
+            console.log('❌ No hay tracks disponibles');
+            document.getElementById('nowPlaying').textContent = "No hay música disponible";
+            return;
+        }
+
         const randomTrack = this.tracks[Math.floor(Math.random() * this.tracks.length)];
+        console.log('🎵 Intentando reproducir:', randomTrack.file);
+    
         this.currentAudio = new Audio(randomTrack.file);
-        
+    
         this.currentAudio.play().then(() => {
             this.isPlaying = true;
             document.getElementById('musicToggle').textContent = '⏸️';
             document.getElementById('nowPlaying').textContent = randomTrack.name;
+            console.log('✅ Reproduciendo:', randomTrack.name);
         }).catch(error => {
-            console.log('Reproducción automática bloqueada:', error);
+            console.log('❌ Error al reproducir:', error);
             document.getElementById('nowPlaying').textContent = "Click en 🎵 para reproducir";
+            // Mostrar mensaje más específico
+            if (error.name === 'NotSupportedError') {
+                document.getElementById('nowPlaying').textContent = "Formato no soportado";
+            } else if (error.name === 'NotAllowedError') {
+                document.getElementById('nowPlaying').textContent = "Click para permitir audio";
+            }
         });
 
-        this.currentAudio.addEventListener('ended', () => {
-            setTimeout(() => this.nextTrack(), 2000);
-        });
-    }
+    this.currentAudio.addEventListener('ended', () => {
+        console.log('🎵 Canción terminada, siguiente...');
+        setTimeout(() => this.nextTrack(), 2000);
+    });
+
+    this.currentAudio.addEventListener('error', (e) => {
+        console.error('❌ Error de audio:', e);
+        document.getElementById('nowPlaying').textContent = "Error cargando audio";
+    });
+}
 
     nextTrack() {
         this.playRandom();
