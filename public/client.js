@@ -11,7 +11,7 @@ class GridyClient {
     }
     
     init() {
-        console.log('🚀 Iniciando MESH TCSACM Client...');
+        console.log('🚀 Iniciando MESH Client...');
         this.loadUser();
         this.setupEventListeners();
         this.connect();
@@ -84,7 +84,7 @@ class GridyClient {
         console.log('✅ Eventos configurados');
     }
     
-    // 🎨 TEMA NOCTURNO
+    // 🎨 TEMA NOCTURNO - FUNCIONES NUEVAS
     loadTheme() {
         const savedTheme = localStorage.getItem('gridy_theme');
         if (savedTheme === 'night') {
@@ -94,8 +94,11 @@ class GridyClient {
     }
 
     createThemeToggle() {
+        // Verificar si ya existe el botón
+        if (document.querySelector('.theme-toggle')) return;
+        
         const toggleBtn = document.createElement('button');
-        toggleBtn.innerHTML = '🌙';
+        toggleBtn.innerHTML = document.body.classList.contains('night-mode') ? '☀️' : '🌙';
         toggleBtn.className = 'theme-toggle';
         toggleBtn.title = 'Cambiar tema';
         toggleBtn.onclick = () => this.toggleTheme();
@@ -109,7 +112,9 @@ class GridyClient {
         
         // Cambiar el emoji del botón
         const toggleBtn = document.querySelector('.theme-toggle');
-        toggleBtn.innerHTML = isNightMode ? '☀️' : '🌙';
+        if (toggleBtn) {
+            toggleBtn.innerHTML = isNightMode ? '☀️' : '🌙';
+        }
     }
     
     saveUserNickname() {
@@ -138,7 +143,7 @@ class GridyClient {
             this.socket = new WebSocket(wsUrl);
             
             this.socket.onopen = () => {
-                console.log('✅ Conectado a MESH TCSACM');
+                console.log('✅ Conectado al MESH TCSACM');
                 this.reconnectAttempts = 0;
                 this.updateStatus('Conectado 🌐');
             };
@@ -198,10 +203,6 @@ class GridyClient {
                 
             case 'error':
                 alert(`Error: ${data.message}`);
-                break;
-                
-            case 'heartbeat_ack':
-                // Conexión viva
                 break;
         }
     }
@@ -290,7 +291,7 @@ class GridyClient {
         return cell;
     }
     
-    // 🎉 REACCIONES RÁPIDAS
+    // 🎉 REACCIONES RÁPIDAS - FUNCIONES NUEVAS
     addQuickReactions(post) {
         const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
         return `
@@ -303,8 +304,10 @@ class GridyClient {
     }
 
     sendReaction(postId, reaction) {
-        // Detener la propagación del evento para que no abra el modal
-        event.stopPropagation();
+        // Usamos event global ya que viene del onclick
+        if (window.event) {
+            window.event.stopPropagation();
+        }
         
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
@@ -344,6 +347,9 @@ class GridyClient {
         commentItem.className = 'comment-item';
         commentItem.textContent = `${comment.user}: ${comment.text}`;
         commentsList.appendChild(commentItem);
+        
+        // Auto-scroll al último comentario
+        commentsList.scrollTop = commentsList.scrollHeight;
     }
     
     closeCommentModal() {
