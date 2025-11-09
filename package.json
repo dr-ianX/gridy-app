@@ -1,16 +1,20 @@
 {
   "name": "gridy-app",
   "version": "1.0.0",
-  "description": "Red social minimalista con WebSockets",
+  "description": "Red social minimalista para compositores con WebSockets",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"
   },
   "dependencies": {
-    "ws": "^8.14.0"
+    "ws": "^8.14.0",
+    "google-spreadsheet": "^4.1.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": ["social", "websockets", "minimalist"],
-  "author": "TuNombre",
+  "author": "AdrianParedes",
   "license": "MIT"
 }
