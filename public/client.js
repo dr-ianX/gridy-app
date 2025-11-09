@@ -674,7 +674,7 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO SIMPLIFICADO
+// 🎵 REPRODUCTOR DE AUDIO CON TRACKING SACM MEJORADO
 class MusicPlayer {
     constructor() {
         this.tracks = [
@@ -690,6 +690,8 @@ class MusicPlayer {
         this.currentTrackIndex = 0;
         this.audio = new Audio();
         this.isPlaying = false;
+        this.trackStartTime = 0;
+        this.currentTrackName = '';
     }
 
     init() {
@@ -718,16 +720,26 @@ class MusicPlayer {
     }
 
     setupAudioEvents() {
+        // 🎯 MEJORADO: Un solo event listener para ended que maneje TODO
         this.audio.addEventListener('ended', () => {
-            this.isPlaying = false;
-            document.getElementById('musicToggle').textContent = '🎵';
-            document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
+            this.handleTrackEnd();
         });
 
         this.audio.addEventListener('error', (e) => {
             console.error('❌ Error de audio:', e);
             this.showError('Error cargando audio');
         });
+    }
+
+    // 🎯 NUEVO: Manejar el fin de la reproducción (tracking + UI)
+    handleTrackEnd() {
+        const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
+        this.completeSACMTracking(this.currentTrackName, duration);
+        
+        // Tu código original de UI
+        this.isPlaying = false;
+        document.getElementById('musicToggle').textContent = '🎵';
+        document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
     }
 
     togglePlay() {
@@ -742,7 +754,7 @@ class MusicPlayer {
         const track = this.tracks[this.currentTrackIndex];
         console.log('🎵 Reproduciendo:', track.file);
         
-        // 🎯 NUEVO: Iniciar tracking para SACM
+        // 🎯 Iniciar tracking para SACM
         this.startSACMTracking(track.name);
         
         this.audio.src = track.file;
@@ -756,7 +768,7 @@ class MusicPlayer {
         });
     }
 
-    // 🎯 NUEVO: Método para tracking SACM
+    // 🎯 Método para tracking SACM
     startSACMTracking(trackName) {
         this.trackStartTime = Date.now();
         this.currentTrackName = trackName;
@@ -769,12 +781,6 @@ class MusicPlayer {
                 userId: window.gridyApp.currentUser
             }));
         }
-
-        // Configurar listener para cuando termine
-        this.audio.onended = () => {
-            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
-            this.completeSACMTracking(trackName, duration);
-        };
     }
 
     completeSACMTracking(trackName, duration) {
@@ -785,6 +791,7 @@ class MusicPlayer {
                 userId: window.gridyApp.currentUser,
                 duration: duration
             }));
+            console.log('📊 Tracking SACM enviado:', { trackName, duration });
         }
     }
 
@@ -792,15 +799,33 @@ class MusicPlayer {
         this.audio.pause();
         this.isPlaying = false;
         document.getElementById('musicToggle').textContent = '🎵';
+        
+        // 🎯 OPCIONAL: Tracking de pausa (si SACM lo requiere)
+        if (this.trackStartTime > 0) {
+            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
+            this.completeSACMTracking(this.currentTrackName, duration);
+        }
     }
 
     nextTrack() {
+        // 🎯 Tracking de la canción actual antes de cambiar
+        if (this.isPlaying && this.trackStartTime > 0) {
+            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
+            this.completeSACMTracking(this.currentTrackName, duration);
+        }
+        
         this.pause();
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
         this.playCurrentTrack();
     }
 
     prevTrack() {
+        // 🎯 Tracking de la canción actual antes de cambiar
+        if (this.isPlaying && this.trackStartTime > 0) {
+            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
+            this.completeSACMTracking(this.currentTrackName, duration);
+        }
+        
         this.pause();
         this.currentTrackIndex = (this.currentTrackIndex - 1 + this.tracks.length) % this.tracks.length;
         this.playCurrentTrack();
