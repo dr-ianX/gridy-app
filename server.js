@@ -1,3 +1,20 @@
+// 🎯 DEBUG DE EMERGENCIA - AGREGAR AL PRINCIPIO
+console.log('=== 🚨 INICIANDO SERVIDOR DE EMERGENCIA ===');
+console.log('🔍 PORT:', process.env.PORT);
+console.log('🔍 GOOGLE_SERVICE_EMAIL:', process.env.GOOGLE_SERVICE_EMAIL ? '✅ CONFIGURADO' : '❌ FALTANTE');
+console.log('🔍 SHEET_ID:', process.env.SHEET_ID ? '✅ CONFIGURADO' : '❌ FALTANTE');
+console.log('🔍 GOOGLE_PRIVATE_KEY:', process.env.GOOGLE_PRIVATE_KEY ? '✅ CONFIGURADO' : '❌ FALTANTE');
+
+// 🎯 CATCH ALL PARA ERRORES NO CAPTURADOS
+process.on('uncaughtException', (error) => {
+    console.error('💥 ERROR CRÍTICO NO CAPTURADO:', error);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 PROMESA RECHAZADA:', reason);
+});
+
 const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
