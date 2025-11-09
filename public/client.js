@@ -44,7 +44,6 @@ class GridyClient {
     setupEventListeners() {
         console.log('📝 Configurando eventos...');
         
-        // Configurar subida de avatares
         this.setupAvatarUpload();
 
         // Nickname
@@ -97,28 +96,38 @@ class GridyClient {
         avatarInput.style.display = 'none';
         avatarInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
-            if (file && file.size < 2 * 1024 * 1024) { // 2MB max
+            if (file) {
+                if (!file.type.startsWith('image/')) {
+                    alert('Por favor selecciona una imagen válida');
+                    return;
+                }
+                
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('La imagen es muy grande (máximo 2MB)');
+                    return;
+                }
+                
                 try {
                     const avatarData = await this.uploadAvatar(file);
-                    // Guardar avatar en el usuario actual
-                    if (typeof this.currentUser === 'string') {
-                        // Si currentUser es solo un string, guardamos en localStorage
+                    if (avatarData.startsWith('data:image')) {
                         localStorage.setItem('gridy_avatar', avatarData);
+                        this.renderGrid();
+                        alert('¡Avatar actualizado! 🎉');
+                    } else {
+                        alert('Error procesando la imagen');
                     }
-                    this.renderGrid();
                 } catch (error) {
+                    console.error('Error subiendo avatar:', error);
                     alert('Error subiendo avatar');
                 }
-            } else {
-                alert('Archivo muy grande (máx 2MB)');
             }
         });
         document.body.appendChild(avatarInput);
 
-        // Botón para subir avatar
         const avatarBtn = document.createElement('button');
         avatarBtn.textContent = '📷';
         avatarBtn.className = 'avatar-upload-btn';
+        avatarBtn.title = 'Cambiar foto de perfil';
         avatarBtn.onclick = () => avatarInput.click();
         document.body.appendChild(avatarBtn);
     }
@@ -129,12 +138,15 @@ class GridyClient {
             reader.onload = (e) => {
                 resolve(e.target.result);
             };
-            reader.onerror = reject;
+            reader.onerror = () => reject(new Error('Error leyendo archivo'));
             reader.readAsDataURL(file);
         });
     }
 
     createComposerFeatures() {
+        // Solo crear si no existe
+        if (document.querySelector('.composer-panel')) return;
+        
         const composerPanel = document.createElement('div');
         composerPanel.className = 'composer-panel';
         composerPanel.innerHTML = `
@@ -147,7 +159,6 @@ class GridyClient {
     
         document.querySelector('.container').prepend(composerPanel);
     
-        // Event listeners para las nuevas funciones
         document.getElementById('shareLyrics').addEventListener('click', () => {
             this.openLyricsModal();
         });
@@ -190,7 +201,6 @@ class GridyClient {
         }
     }
     
-    // 🎨 TEMA NOCTURNO - FUNCIONES
     loadTheme() {
         const savedTheme = localStorage.getItem('gridy_theme');
         if (savedTheme === 'night') {
@@ -376,8 +386,12 @@ class GridyClient {
         cell.className = `post-cell ${sizeClass}`;
         cell.style.animationDelay = `${Math.random() * 4}s`;
         
-        // Obtener avatar personalizado o usar emoji por defecto
-        const userAvatar = localStorage.getItem('gridy_avatar') || this.getUserAvatar(post.user);
+        let userAvatar = this.getUserAvatar(post.user);
+        const savedAvatar = localStorage.getItem('gridy_avatar');
+        
+        if (savedAvatar && savedAvatar.startsWith('data:image')) {
+            userAvatar = `<img src="${savedAvatar}" class="avatar-image" alt="${post.user}">`;
+        }
         
         cell.innerHTML = `
             <div class="interaction-count">${post.interactions} 💫</div>
@@ -617,17 +631,17 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO INTEGRADO
+// 🎵 REPRODUCTOR DE AUDIO
 class MusicPlayer {
     constructor() {
         this.tracks = [
             { 
                 name: "🎵 4 - dR.iAn", 
-                file: "music/track1.mp3" 
+                file: "/music/track1.mp3" 
             },
             { 
                 name: "🎵 Me Reconozco - Rodrigo Escamilla", 
-                file: "music/mereconozco.mp3" 
+                file: "/music/mereconozco.mp3" 
             }
         ];
         this.currentTrackIndex = 0;
@@ -806,7 +820,7 @@ class MusicPlayer {
     }
 }
 
-// Inicializar la aplicación cuando el DOM esté listo
+// Inicializar la aplicación
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🎮 MESH iniciando...');
     window.gridyApp = new GridyClient();
