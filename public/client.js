@@ -7,6 +7,7 @@ class GridyClient {
         this.maxReconnectAttempts = 5;
         this.currentPost = null;
         this.musicPlayer = new MusicPlayer();
+        this.composerMode = true; // Todos pueden ser compositores por ahora
         
         this.init();
     }
@@ -88,63 +89,100 @@ class GridyClient {
     }
 
     createComposerFeatures() {
-        // Solo crear si no existe
         if (document.querySelector('.composer-panel')) return;
         
         const composerPanel = document.createElement('div');
         composerPanel.className = 'composer-panel';
         composerPanel.innerHTML = `
-            <h4>🎵 Para Compositores TCSACM</h4>
-            <button id="shareLyrics">📝 Compartir Letras</button>
-            <button id="shareChords">🎸 Compartir Acordes</button>
-            <button id="findCollaboration">🤝 Buscar Colaboración</button>
-            <button id="shareEvent">📅 Compartir Evento</button>
+            <h4>🎵 Herramientas para Compositores</h4>
+            <div class="composer-grid">
+                <button class="composer-btn" data-type="lyrics">
+                    <span class="icon">📝</span>
+                    <span class="label">Letras</span>
+                    <small>Comparte tus canciones</small>
+                </button>
+                <button class="composer-btn" data-type="chords">
+                    <span class="icon">🎸</span>
+                    <span class="label">Acordes</span>
+                    <small>Progresiones armónicas</small>
+                </button>
+                <button class="composer-btn" data-type="collaboration">
+                    <span class="icon">🤝</span>
+                    <span class="label">Colaborar</span>
+                    <small>Busco músicos</small>
+                </button>
+                <button class="composer-btn" data-type="event">
+                    <span class="icon">📅</span>
+                    <span class="label">Eventos</span>
+                    <small>Conciertos y talleres</small>
+                </button>
+                <button class="composer-btn" data-type="project">
+                    <span class="icon">💿</span>
+                    <span class="label">Proyectos</span>
+                    <small>Álbumes en proceso</small>
+                </button>
+                <button class="composer-btn" data-type="lookingfor">
+                    <span class="icon">🔍</span>
+                    <span class="label">Busco</span>
+                    <small>Equipo o recursos</small>
+                </button>
+            </div>
         `;
     
         document.querySelector('.container').prepend(composerPanel);
     
-        document.getElementById('shareLyrics').addEventListener('click', () => {
-            this.openLyricsModal();
-        });
-        document.getElementById('shareChords').addEventListener('click', () => {
-            this.openChordsModal();
-        });
-        document.getElementById('findCollaboration').addEventListener('click', () => {
-            this.openCollaborationModal();
-        });
-        document.getElementById('shareEvent').addEventListener('click', () => {
-            this.openEventModal();
+        // Event listeners para todos los botones
+        document.querySelectorAll('.composer-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const type = e.currentTarget.getAttribute('data-type');
+                this.openComposerModal(type);
+            });
         });
     }
 
-    openLyricsModal() {
-        const lyrics = prompt('Comparte tus letras o acordes:');
-        if (lyrics) {
-            this.sendPost(`🎵 COMPOSICIÓN:\n${lyrics}`);
+    openComposerModal(postType) {
+        const configs = {
+            lyrics: {
+                title: '📝 Compartir Letras',
+                placeholder: 'Escribe las letras de tu canción...\n\nEjemplo:\n[Estrofa 1]\nEstas son las letras de mi alma...\n\n[Coro]\nY este es el coro que todos cantarán...',
+                prefix: '🎵 LETRAS:\n'
+            },
+            chords: {
+                title: '🎸 Progresión de Acordes',
+                placeholder: 'Comparte la progresión:\n\nEjemplo:\nG - D - Em - C\n\nO en notación jazz:\nAm7 | D7 | G maj7 | C maj7',
+                prefix: '🎸 ACORDES:\n'
+            },
+            collaboration: {
+                title: '🤝 Busco Colaboración',
+                placeholder: '¿Qué necesitas?\n\nEjemplos:\n- "Baterista para tema rock"\n- "Cantante para balada"\n- "Productor para mezclar"\n- "Compositor para letras"',
+                prefix: '🤝 COLABORACIÓN:\n'
+            },
+            event: {
+                title: '📅 Compartir Evento',
+                placeholder: 'Detalles del evento:\n\nFecha: [fecha]\nHora: [hora]\nLugar: [lugar]\nCosto: [costo]\n\nDescripción...',
+                prefix: '📅 EVENTO:\n'
+            },
+            project: {
+                title: '💿 Mi Proyecto Musical',
+                placeholder: 'Cuéntanos sobre tu proyecto:\n\n- Nombre del proyecto\n- Género musical\n- Estado (grabando, mezclando, etc.)\n- Fecha estimada de lanzamiento\n- Necesidades específicas',
+                prefix: '💿 PROYECTO:\n'
+            },
+            lookingfor: {
+                title: '🔍 Estoy Buscando',
+                placeholder: '¿Qué necesitas encontrar?\n\nEjemplos:\n- "Estudio de grabación económico"\n- "Diseñador para portada de álbum"\n- "Salas para ensayar"\n- "Manager o representante"',
+                prefix: '🔍 BUSCO:\n'
+            }
+        };
+
+        const config = configs[postType];
+        const content = prompt(config.title + '\n\n' + config.placeholder);
+        
+        if (content) {
+            // 🎯 POST ESPECIAL - SIN LÍMITE DIARIO
+            this.sendPost(config.prefix + content, 'composer');
         }
     }
 
-    openChordsModal() {
-        const chords = prompt('Comparte la progresión de acordes:');
-        if (chords) {
-            this.sendPost(`🎸 ACORDES:\n${chords}`);
-        }
-    }
-
-    openCollaborationModal() {
-        const collaboration = prompt('¿Qué buscas para colaborar? (ej: "Baterista para canción rock")');
-        if (collaboration) {
-            this.sendPost(`🤝 BUSCO COLABORACIÓN:\n${collaboration}`);
-        }
-    }
-
-    openEventModal() {
-        const event = prompt('Comparte tu evento (fecha, lugar, etc.):');
-        if (event) {
-            this.sendPost(`📅 EVENTO:\n${event}`);
-        }
-    }
-    
     loadTheme() {
         const savedTheme = localStorage.getItem('gridy_theme');
         if (savedTheme === 'night') {
@@ -322,19 +360,19 @@ class GridyClient {
     createPostCell(post) {
         const cell = document.createElement('div');
         
-        let sizeClass = 'small';
-        if (post.interactions >= 15) sizeClass = 'xlarge';
-        else if (post.interactions >= 10) sizeClass = 'large';
-        else if (post.interactions >= 5) sizeClass = 'medium';
+        // Tamaño inteligente basado en interacciones + contenido
+        let sizeClass = this.calculatePostSize(post);
         
         cell.className = `post-cell ${sizeClass}`;
         cell.style.animationDelay = `${Math.random() * 4}s`;
         
-        // 🎯 CORRECCIÓN: SOLO usar emojis, eliminar código de avatar
+        // 🎯 Indicador visual del tipo de contenido
+        const typeIndicator = this.getTypeIndicator(post);
         const userAvatar = this.getUserAvatar(post.user);
         
         cell.innerHTML = `
             <div class="interaction-count">${post.interactions} 💫</div>
+            ${typeIndicator}
             <div class="user-avatar">${userAvatar}</div>
             <div class="user-name">${post.user}</div>
             <div class="post-content">${post.content}</div>
@@ -342,7 +380,67 @@ class GridyClient {
         `;
         
         cell.addEventListener('click', () => this.openPostModal(post));
+        
+        // 🎯 Efectos especiales para posts populares
+        this.applySpecialEffects(cell, post);
+        
         return cell;
+    }
+
+    // 🎵 NUEVO: Calcular tamaño inteligente
+    calculatePostSize(post) {
+        const baseInteractions = post.interactions;
+        const contentLength = post.content.length;
+        
+        // Posts largos o con muchas interacciones son más grandes
+        let sizeScore = baseInteractions + (contentLength / 100);
+        
+        if (sizeScore >= 20) return 'xlarge';
+        if (sizeScore >= 15) return 'large';
+        if (sizeScore >= 8) return 'medium';
+        return 'small';
+    }
+
+    // 🎵 NUEVO: Indicador del tipo de contenido
+    getTypeIndicator(post) {
+        if (post.content.includes('🎵 LETRAS:')) {
+            return '<div class="post-type-badge lyrics-badge">📝 Letras</div>';
+        }
+        if (post.content.includes('🎸 ACORDES:')) {
+            return '<div class="post-type-badge chords-badge">🎸 Acordes</div>';
+        }
+        if (post.content.includes('🤝 COLABORACIÓN:')) {
+            return '<div class="post-type-badge collab-badge">🤝 Colaboración</div>';
+        }
+        if (post.content.includes('📅 EVENTO:')) {
+            return '<div class="post-type-badge event-badge">📅 Evento</div>';
+        }
+        if (post.content.includes('💿 PROYECTO:')) {
+            return '<div class="post-type-badge project-badge">💿 Proyecto</div>';
+        }
+        if (post.content.includes('🔍 BUSCO:')) {
+            return '<div class="post-type-badge search-badge">🔍 Busco</div>';
+        }
+        return '';
+    }
+
+    // 🎵 NUEVO: Efectos especiales tipo Bejeweled
+    applySpecialEffects(cell, post) {
+        // Efecto de glow para posts muy populares
+        if (post.interactions >= 15) {
+            cell.classList.add('popular-glow');
+        }
+        
+        // Efecto de "combo" para múltiples posts del mismo usuario
+        const userPosts = this.posts.filter(p => p.user === post.user);
+        if (userPosts.length >= 3) {
+            cell.classList.add('combo-effect');
+        }
+        
+        // Efecto especial para posts de compositores
+        if (post.content.includes('🎵') || post.content.includes('🎸')) {
+            cell.classList.add('composer-post');
+        }
     }
     
     addQuickReactions(post) {
@@ -482,12 +580,13 @@ class GridyClient {
         }
     }
     
-    sendPost(content) {
+    sendPost(content, postType = 'general') {
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
                 type: 'new_post',
                 user: this.currentUser,
-                content: content
+                content: content,
+                postType: postType // ← NUEVO: para posts de compositores
             }));
             return true;
         }
@@ -558,8 +657,12 @@ class GridyClient {
 
         this.posts.forEach(post => {
             const hoursOld = (now - post.timestamp) / oneHour;
-            if (hoursOld > 1 && post.interactions > 0) {
-                const decay = Math.floor(hoursOld / 2);
+            
+            // 🎯 Posts de compositores decaen más lento
+            const decayRate = post.content.includes('🎵') || post.content.includes('🎸') ? 0.5 : 1;
+            
+            if (hoursOld > 2 && post.interactions > 0) {
+                const decay = Math.floor((hoursOld / 4) * decayRate);
                 post.interactions = Math.max(0, post.interactions - decay);
                 hasChanges = true;
             }
@@ -577,11 +680,11 @@ class MusicPlayer {
         this.tracks = [
             { 
                 name: "🎵 4 - dR.iAn", 
-                file: "/music/track1.mp3" 
+                file: "/Music/track1.mp3" 
             },
             { 
                 name: "🎵 Me Reconozco - Rodrigo Escamilla", 
-                file: "/music/mereconozco.mp3" 
+                file: "/Music/mereconozco.mp3" 
             }
         ];
         this.currentTrackIndex = 0;
