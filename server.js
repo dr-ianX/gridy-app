@@ -418,14 +418,34 @@ process.on('SIGINT', () => {
 
 // Iniciar servidor
 const PORT = process.env.PORT || 8000;
-server.listen(PORT, () => {
+
+// 🎯 AGREGAR ESTA VERIFICACIÓN DE ERRORES ANTES DE LISTEN
+server.on('error', (error) => {
+    console.error('💥 ERROR del servidor:', error);
+    if (error.code === 'EADDRINUSE') {
+        console.log(`❌ Puerto ${PORT} ya en uso`);
+    }
+});
+
+server.listen(PORT, '0.0.0.0', () => {  // ← 🎯 AÑADIR '0.0.0.0'
     console.log(`🚀 Servidor MESH ejecutándose en puerto ${PORT}`);
     console.log('🎵 Sistema de compositores ACTIVADO - Posts ilimitados para contenido musical');
     console.log('📁 Servidor de archivos estáticos LISTO');
     console.log('💾 Almacenamiento en memoria activo (200 posts máximo)');
+    console.log('✅ SACM Tracking: ACTIVADO');
+    console.log('📊 Endpoint reportes: /sacm-report');
     console.log('🌟 Características:');
     console.log('   - Posts generales: 1 por día');
     console.log('   - Posts de compositores: ILIMITADOS');
     console.log('   - Letras, acordes, eventos, colaboraciones, proyectos');
     console.log('   - Sistema de badges y efectos visuales');
+});
+
+// 🎯 AGREGAR ESTO PARA DEBUG
+process.on('uncaughtException', (error) => {
+    console.error('💥 UNCAUGHT EXCEPTION:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('💥 UNHANDLED REJECTION at:', promise, 'reason:', reason);
 });
