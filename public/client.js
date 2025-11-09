@@ -44,8 +44,6 @@ class GridyClient {
     setupEventListeners() {
         console.log('📝 Configurando eventos...');
         
-        this.setupAvatarUpload();
-
         // Nickname
         document.getElementById('saveNickname').addEventListener('click', () => this.saveUserNickname());
         document.getElementById('nicknameInput').addEventListener('keypress', (e) => {
@@ -87,60 +85,6 @@ class GridyClient {
         });
 
         console.log('✅ Eventos configurados');
-    }
-    
-    setupAvatarUpload() {
-        const avatarInput = document.createElement('input');
-        avatarInput.type = 'file';
-        avatarInput.accept = 'image/*';
-        avatarInput.style.display = 'none';
-        avatarInput.addEventListener('change', async (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                if (!file.type.startsWith('image/')) {
-                    alert('Por favor selecciona una imagen válida');
-                    return;
-                }
-                
-                if (file.size > 2 * 1024 * 1024) {
-                    alert('La imagen es muy grande (máximo 2MB)');
-                    return;
-                }
-                
-                try {
-                    const avatarData = await this.uploadAvatar(file);
-                    if (avatarData.startsWith('data:image')) {
-                        localStorage.setItem('gridy_avatar', avatarData);
-                        this.renderGrid();
-                        alert('¡Avatar actualizado! 🎉');
-                    } else {
-                        alert('Error procesando la imagen');
-                    }
-                } catch (error) {
-                    console.error('Error subiendo avatar:', error);
-                    alert('Error subiendo avatar');
-                }
-            }
-        });
-        document.body.appendChild(avatarInput);
-
-        const avatarBtn = document.createElement('button');
-        avatarBtn.textContent = '📷';
-        avatarBtn.className = 'avatar-upload-btn';
-        avatarBtn.title = 'Cambiar foto de perfil';
-        avatarBtn.onclick = () => avatarInput.click();
-        document.body.appendChild(avatarBtn);
-    }
-
-    async uploadAvatar(file) {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                resolve(e.target.result);
-            };
-            reader.onerror = () => reject(new Error('Error leyendo archivo'));
-            reader.readAsDataURL(file);
-        });
     }
 
     createComposerFeatures() {
@@ -386,12 +330,8 @@ class GridyClient {
         cell.className = `post-cell ${sizeClass}`;
         cell.style.animationDelay = `${Math.random() * 4}s`;
         
-        let userAvatar = this.getUserAvatar(post.user);
-        const savedAvatar = localStorage.getItem('gridy_avatar');
-        
-        if (savedAvatar && savedAvatar.startsWith('data:image')) {
-            userAvatar = `<img src="${savedAvatar}" class="avatar-image" alt="${post.user}">`;
-        }
+        // 🎯 CORRECCIÓN: SOLO usar emojis, eliminar código de avatar
+        const userAvatar = this.getUserAvatar(post.user);
         
         cell.innerHTML = `
             <div class="interaction-count">${post.interactions} 💫</div>
@@ -631,7 +571,7 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO
+// 🎵 REPRODUCTOR DE AUDIO SIMPLIFICADO
 class MusicPlayer {
     constructor() {
         this.tracks = [
@@ -645,26 +585,13 @@ class MusicPlayer {
             }
         ];
         this.currentTrackIndex = 0;
-        this.audioContext = null;
-        this.audioBuffer = null;
-        this.source = null;
+        this.audio = new Audio();
         this.isPlaying = false;
-        this.isLoading = false;
     }
 
-    async init() {
+    init() {
         this.createPlayerUI();
-        await this.initializeAudio();
-    }
-
-    async initializeAudio() {
-        try {
-            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            console.log('✅ AudioContext inicializado');
-        } catch (error) {
-            console.error('❌ Error inicializando AudioContext:', error);
-            this.showError('Audio no soportado en este navegador');
-        }
+        this.setupAudioEvents();
     }
 
     createPlayerUI() {
@@ -678,7 +605,6 @@ class MusicPlayer {
                         <button id="nextTrack">⏭️</button>
                     </div>
                 </div>
-                <div class="loading-spinner" id="loadingSpinner" style="display: none;">⏳</div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', playerHTML);
@@ -688,130 +614,58 @@ class MusicPlayer {
         document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
     }
 
-    async togglePlay() {
-        if (this.isLoading) return;
-        
-        if (this.isPlaying) {
-            this.stop();
-        } else {
-            await this.playCurrentTrack();
-        }
-    }
+    setupAudioEvents() {
+        this.audio.addEventListener('ended', () => {
+            this.isPlaying = false;
+            document.getElementById('musicToggle').textContent = '🎵';
+            document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
+        });
 
-    async playCurrentTrack() {
-        if (this.isLoading) return;
-        
-        const track = this.tracks[this.currentTrackIndex];
-        console.log('🎵 Intentando reproducir:', track.file);
-        
-        this.isLoading = true;
-        this.showLoading(true);
-        
-        try {
-            await this.loadAudioFile(track.file);
-            
-            this.source = this.audioContext.createBufferSource();
-            this.source.buffer = this.audioBuffer;
-            this.source.connect(this.audioContext.destination);
-            this.source.start(0);
-            
-            this.isPlaying = true;
-            this.isLoading = false;
-            this.showLoading(false);
-            
-            document.getElementById('musicToggle').textContent = '⏸️';
-            document.getElementById('nowPlaying').textContent = `Sonando: ${track.name}`;
-            
-            this.source.onended = () => {
-                this.isPlaying = false;
-                document.getElementById('musicToggle').textContent = '🎵';
-                document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
-                console.log('🎵 Canción terminada');
-            };
-            
-            console.log('✅ Reproduciendo:', track.name);
-            
-        } catch (error) {
-            console.error('❌ Error reproduciendo:', error);
-            this.isLoading = false;
-            this.showLoading(false);
+        this.audio.addEventListener('error', (e) => {
+            console.error('❌ Error de audio:', e);
             this.showError('Error cargando audio');
-        }
-    }
-
-    async loadAudioFile(url) {
-        return new Promise((resolve, reject) => {
-            console.log('📥 Cargando archivo:', url);
-        
-            const request = new XMLHttpRequest();
-            request.open('GET', url, true);
-            request.responseType = 'arraybuffer';
-        
-            request.onload = () => {
-                if (request.status === 200) {
-                    console.log('📦 Archivo cargado, tamaño:', request.response.byteLength);
-                
-                    this.audioContext.decodeAudioData(request.response, 
-                        (buffer) => {
-                            this.audioBuffer = buffer;
-                            console.log('✅ Audio decodificado');
-                            resolve();
-                        },
-                        (error) => {
-                            console.error('❌ Error decodificando audio:', error);
-                            reject(error);
-                        }
-                    );
-                } else {
-                    reject(new Error(`HTTP error! status: ${request.status}`));
-                }
-            };
-        
-            request.onerror = () => {
-                reject(new Error('Network error'));
-            };
-        
-            request.send();
         });
     }
 
-    stop() {
-        if (this.source) {
-            this.source.stop();
-            this.source = null;
+    togglePlay() {
+        if (this.isPlaying) {
+            this.pause();
+        } else {
+            this.playCurrentTrack();
         }
+    }
+
+    playCurrentTrack() {
+        const track = this.tracks[this.currentTrackIndex];
+        console.log('🎵 Reproduciendo:', track.file);
+        
+        this.audio.src = track.file;
+        this.audio.play().then(() => {
+            this.isPlaying = true;
+            document.getElementById('musicToggle').textContent = '⏸️';
+            document.getElementById('nowPlaying').textContent = `Sonando: ${track.name}`;
+        }).catch(error => {
+            console.error('❌ Error al reproducir:', error);
+            this.showError('No se pudo reproducir');
+        });
+    }
+
+    pause() {
+        this.audio.pause();
         this.isPlaying = false;
         document.getElementById('musicToggle').textContent = '🎵';
-        document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
     }
 
-    async nextTrack() {
-        this.stop();
+    nextTrack() {
+        this.pause();
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
-        
-        if (this.isPlaying) {
-            await this.playCurrentTrack();
-        } else {
-            const track = this.tracks[this.currentTrackIndex];
-            document.getElementById('nowPlaying').textContent = `Siguiente: ${track.name}`;
-        }
+        this.playCurrentTrack();
     }
 
-    async prevTrack() {
-        this.stop();
+    prevTrack() {
+        this.pause();
         this.currentTrackIndex = (this.currentTrackIndex - 1 + this.tracks.length) % this.tracks.length;
-        
-        if (this.isPlaying) {
-            await this.playCurrentTrack();
-        } else {
-            const track = this.tracks[this.currentTrackIndex];
-            document.getElementById('nowPlaying').textContent = `Anterior: ${track.name}`;
-        }
-    }
-
-    showLoading(show) {
-        const spinner = document.getElementById('loadingSpinner');
-        spinner.style.display = show ? 'block' : 'none';
+        this.playCurrentTrack();
     }
 
     showError(message) {
