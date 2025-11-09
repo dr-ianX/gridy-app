@@ -4,9 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
-// 🎯 GOOGLE SHEETS TRACKING - VERSIÓN CORREGIDA
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-
 class SACMTracker {
     constructor() {
         this.doc = null;
