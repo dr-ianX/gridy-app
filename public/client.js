@@ -742,6 +742,9 @@ class MusicPlayer {
         const track = this.tracks[this.currentTrackIndex];
         console.log('🎵 Reproduciendo:', track.file);
         
+        // 🎯 NUEVO: Iniciar tracking para SACM
+        this.startSACMTracking(track.name);
+        
         this.audio.src = track.file;
         this.audio.play().then(() => {
             this.isPlaying = true;
@@ -751,6 +754,38 @@ class MusicPlayer {
             console.error('❌ Error al reproducir:', error);
             this.showError('No se pudo reproducir');
         });
+    }
+
+    // 🎯 NUEVO: Método para tracking SACM
+    startSACMTracking(trackName) {
+        this.trackStartTime = Date.now();
+        this.currentTrackName = trackName;
+        
+        // Enviar evento de inicio de reproducción
+        if (window.gridyApp?.socket?.readyState === WebSocket.OPEN) {
+            window.gridyApp.socket.send(JSON.stringify({
+                type: 'music_play_start',
+                songId: trackName,
+                userId: window.gridyApp.currentUser
+            }));
+        }
+
+        // Configurar listener para cuando termine
+        this.audio.onended = () => {
+            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
+            this.completeSACMTracking(trackName, duration);
+        };
+    }
+
+    completeSACMTracking(trackName, duration) {
+        if (window.gridyApp?.socket?.readyState === WebSocket.OPEN) {
+            window.gridyApp.socket.send(JSON.stringify({
+                type: 'music_play_complete',
+                songId: trackName,
+                userId: window.gridyApp.currentUser,
+                duration: duration
+            }));
+        }
     }
 
     pause() {

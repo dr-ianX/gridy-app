@@ -4,7 +4,9 @@ const fs = require('fs');
 const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
-// 🎯 CONFIGURACIÓN SACM TRACKER
+// 🎯 GOOGLE SHEETS TRACKING - VERSIÓN CORREGIDA
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+
 class SACMTracker {
     constructor() {
         this.doc = null;
@@ -22,6 +24,7 @@ class SACMTracker {
 
             this.doc = new GoogleSpreadsheet(process.env.SHEET_ID);
             
+            // 🎯 NUEVA FORMA DE AUTENTICACIÓN - ESTO ES LO QUE CAMBIÓ
             await this.doc.useServiceAccountAuth({
                 client_email: process.env.GOOGLE_SERVICE_EMAIL,
                 private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -241,8 +244,12 @@ function handleMessage(socket, data) {
         case 'heartbeat':
             socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
             break;
-        // 🎯 NUEVO: Tracking de música para SACM
+        // 🎯 NUEVO: Eventos de música para SACM
+        case 'music_play_start':
+            console.log('🎵 Inicio de reproducción:', data.songId, 'por', data.userId);
+            break;
         case 'music_play_complete':
+            console.log('🎵 Reproducción completada:', data.songId, 'duración:', data.duration);
             sacmTracker.trackPlay(data.songId, data.userId, data.duration);
             break;
     }
