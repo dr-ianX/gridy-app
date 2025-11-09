@@ -21,7 +21,6 @@ class SACMTracker {
 
             this.doc = new GoogleSpreadsheet(process.env.SHEET_ID);
             
-            // 🎯 NUEVA FORMA DE AUTENTICACIÓN - ESTO ES LO QUE CAMBIÓ
             await this.doc.useServiceAccountAuth({
                 client_email: process.env.GOOGLE_SERVICE_EMAIL,
                 private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
@@ -136,14 +135,26 @@ const server = http.createServer((req, res) => {
         return;
     }
     
-    // Manejar rutas
+    // 🎯 NUEVO ENDPOINT PARA DESCARGAR REPORTES
+    if (req.url === '/sacm-report' && req.method === 'GET') {
+        sacmTracker.generateReport().then(csv => {
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="sacm-report.csv"');
+            res.end(csv);
+        }).catch(error => {
+            res.writeHead(500);
+            res.end('Error generando reporte: ' + error.message);
+        });
+        return;
+    }
+    
+    // Manejar rutas de archivos estáticos
     let filePath = req.url;
     
     if (filePath === '/') {
         filePath = '/index.html';
     }
     
-    // Construir la ruta completa
     const fullPath = path.join(__dirname, 'public', filePath);
     const extname = String(path.extname(fullPath)).toLowerCase();
     const contentType = mimeTypes[extname] || 'application/octet-stream';
@@ -197,76 +208,6 @@ function cleanupOldPosts() {
 
 setInterval(cleanupOldPosts, 60 * 60 * 1000);
 
-// Manejar conexiones WebSocket
-wss.on('connection', (socket, req) => {
-    console.log('👤 Nueva conexión WebSocket');
-    
-    // Enviar estado actual
-    socket.send(JSON.stringify({
-        type: 'welcome',
-        message: 'Bienvenido a MESH TCSACM 🌟',
-        posts: state.posts.slice(0, 200) // Aumentado a 200 posts
-    }));
-
-    socket.on('message', (message) => {
-        try {
-            const data = JSON.parse(message);
-            handleMessage(socket, data);
-        } catch (error) {
-            console.error('❌ Error procesando mensaje:', error);
-            socket.send(JSON.stringify({
-                type: 'error',
-                message: 'Mensaje inválido'
-            }));
-        }
-    });
-
-    socket.on('close', () => {
-        console.log('👋 Usuario desconectado');
-    });
-
-    socket.on('error', (error) => {
-        console.error('💥 Error en conexión:', error);
-    });
-});
-
-function handleMessage(socket, data) {
-    switch(data.type) {
-        case 'new_post':
-            handleNewPost(socket, data);
-            break;
-        case 'new_comment':
-            handleNewComment(socket, data);
-            break;
-        case 'heartbeat':
-            socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
-            break;
-        // 🎯 NUEVO: Eventos de música para SACM
-        case 'music_play_start':
-            console.log('🎵 Inicio de reproducción:', data.songId, 'por', data.userId);
-            break;
-        case 'music_play_complete':
-            console.log('🎵 Reproducción completada:', data.songId, 'duración:', data.duration);
-            sacmTracker.trackPlay(data.songId, data.userId, data.duration);
-            break;
-    }
-}
-
-// 🎯 NUEVO ENDPOINT PARA DESCARGAR REPORTES
-server.on('request', (req, res) => {
-    // Endpoint para reporte SACM
-    if (req.url === '/sacm-report' && req.method === 'GET') {
-        sacmTracker.generateReport().then(csv => {
-            res.setHeader('Content-Type', 'text/csv');
-            res.setHeader('Content-Disposition', 'attachment; filename="sacm-report.csv"');
-            res.end(csv);
-        }).catch(error => {
-            res.writeHead(500);
-            res.end('Error generando reporte: ' + error.message);
-        });
-        return;
-    }
-
 // 🎵 MEJORADO: Manejar nueva publicación con sistema de tipos
 function handleNewPost(socket, data) {
     // Validar datos
@@ -315,7 +256,7 @@ function handleNewPost(socket, data) {
     const newPost = {
         id: Date.now().toString(),
         user: data.user,
-        content: data.content.substring(0, 500), // Aumentado a 500 caracteres
+        content: data.content.substring(0, 500),
         interactions: 0,
         comments: [],
         timestamp: Date.now(),
@@ -331,7 +272,7 @@ function handleNewPost(socket, data) {
     // Agregar a la lista de posts
     state.posts.unshift(newPost);
     
-    // Limitar a 200 posts máximo (aumentado para más contenido)
+    // Limitar a 200 posts máximo
     if (state.posts.length > 200) {
         state.posts = state.posts.slice(0, 200);
     }
@@ -356,12 +297,12 @@ function handleNewComment(socket, data) {
     console.log('🔍 Buscando post ID:', data.postId);
     console.log('   Total de posts:', state.posts.length);
     
-    // Buscar el post (usando comparación flexible por si hay diferencias de tipo)
+    // Buscar el post
     const post = state.posts.find(p => p.id == data.postId);
     
     if (!post) {
         console.log('❌ Post no encontrado. IDs disponibles:', 
-            state.posts.slice(0, 5).map(p => p.id)); // Mostrar solo primeros 5
+            state.posts.slice(0, 5).map(p => p.id));
         socket.send(JSON.stringify({
             type: 'error', 
             message: `El post no existe`
@@ -372,7 +313,7 @@ function handleNewComment(socket, data) {
     // Crear nuevo comentario
     const newComment = {
         user: data.user,
-        text: data.text.substring(0, 300), // Aumentado a 300 caracteres
+        text: data.text.substring(0, 300),
         timestamp: Date.now()
     };
     
@@ -408,6 +349,61 @@ function broadcast(message) {
     console.log(`📤 Broadcast enviado a ${sentCount} clientes:`, message.type);
 }
 
+function handleMessage(socket, data) {
+    switch(data.type) {
+        case 'new_post':
+            handleNewPost(socket, data);
+            break;
+        case 'new_comment':
+            handleNewComment(socket, data);
+            break;
+        case 'heartbeat':
+            socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
+            break;
+        // 🎯 NUEVO: Eventos de música para SACM
+        case 'music_play_start':
+            console.log('🎵 Inicio de reproducción:', data.songId, 'por', data.userId);
+            break;
+        case 'music_play_complete':
+            console.log('🎵 Reproducción completada:', data.songId, 'duración:', data.duration);
+            sacmTracker.trackPlay(data.songId, data.userId, data.duration);
+            break;
+    }
+}
+
+// Manejar conexiones WebSocket
+wss.on('connection', (socket, req) => {
+    console.log('👤 Nueva conexión WebSocket');
+    
+    // Enviar estado actual
+    socket.send(JSON.stringify({
+        type: 'welcome',
+        message: 'Bienvenido a MESH TCSACM 🌟',
+        posts: state.posts.slice(0, 200)
+    }));
+
+    socket.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            handleMessage(socket, data);
+        } catch (error) {
+            console.error('❌ Error procesando mensaje:', error);
+            socket.send(JSON.stringify({
+                type: 'error',
+                message: 'Mensaje inválido'
+            }));
+        }
+    });
+
+    socket.on('close', () => {
+        console.log('👋 Usuario desconectado');
+    });
+
+    socket.on('error', (error) => {
+        console.error('💥 Error en conexión:', error);
+    });
+});
+
 // Manejar cierre graceful del servidor
 process.on('SIGINT', () => {
     console.log('🛑 Cerrando servidor...');
@@ -432,5 +428,4 @@ server.listen(PORT, () => {
     console.log('   - Posts de compositores: ILIMITADOS');
     console.log('   - Letras, acordes, eventos, colaboraciones, proyectos');
     console.log('   - Sistema de badges y efectos visuales');
-});
 });
