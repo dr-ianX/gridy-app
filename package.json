@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "ws": "^8.14.0",
-    "google-spreadsheet": "^4.1.1"
+    "google-spreadsheet": "^3.3.0"
   },
   "engines": {
     "node": ">=18.0.0"
