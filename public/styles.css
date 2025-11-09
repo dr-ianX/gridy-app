@@ -427,54 +427,115 @@ body {
     100% { transform: scale(1); }
 }
 
-/* 🎵 REPRODUCTOR DE MÚSICA */
+/* 🎵 REPRODUCTOR DE AUDIO INTEGRADO */
 .music-player {
     position: fixed;
     bottom: 20px;
     left: 20px;
     background: rgba(255, 255, 255, 0.2);
     backdrop-filter: blur(10px);
-    border-radius: 25px;
-    padding: 10px 15px;
+    border-radius: 20px;
+    padding: 15px;
     color: white;
     z-index: 1000;
-    display: flex;
-    align-items: center;
-    gap: 10px;
     border: 1px solid rgba(255, 255, 255, 0.3);
     font-family: Arial, sans-serif;
+    max-width: 320px;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 12px;
 }
 
 .music-player button {
-    background: none;
+    background: rgba(255, 255, 255, 0.15);
     border: none;
     color: white;
-    font-size: 1.2em;
+    font-size: 1.1em;
     cursor: pointer;
-    padding: 5px;
+    padding: 10px;
     border-radius: 50%;
     transition: all 0.3s ease;
-    width: 30px;
-    height: 30px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
+    border: 1px solid rgba(255, 255, 255, 0.2);
 }
 
-.music-player button:hover {
-    background: rgba(255, 255, 255, 0.2);
+.music-player button:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.25);
     transform: scale(1.1);
+}
+
+.music-player button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.player-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
 }
 
 #nowPlaying {
     font-size: 0.9em;
-    max-width: 200px;
+    font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-.night-mode .music-player {
-    background: rgba(255, 255, 255, 0.1);
+.player-controls {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
 }
 
+.player-controls button {
+    width: 35px;
+    height: 35px;
+    font-size: 0.9em;
+}
+
+.loading-spinner {
+    font-size: 1.2em;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.night-mode .music-player {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Estado de reproducción */
+.music-player.playing {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+    .music-player {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        padding: 12px;
+    }
+    
+    .player-info {
+        min-width: 0;
+    }
+    
+    #nowPlaying {
+        font-size: 0.8em;
+    }
+}

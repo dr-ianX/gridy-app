@@ -560,101 +560,191 @@ setupReactionEvents() {
     }
 }
 
-// 🎵 REPRODUCTOR DE MÚSICA COMUNAL
+// 🎵 REPRODUCTOR DE AUDIO INTEGRADO - WEB AUDIO API
 class MusicPlayer {
     constructor() {
         this.tracks = [
-            { name: "🎵 4 - dR.iAn.", url: "https://drive.google.com/uc?export=download&id=1i_r4j7oB1U_wJroNK_S3hFL3kW9r72zK" },
-            { name: "🎵 Me Reconozco - Rodrigo Escamilla", url: "https://drive.google.com/uc?export=download&id=1kw6Hjj4zEJUB1w4Kqwv0sti0RsfkdOJd" },
-            // Agrega aquí más tracks - MÁXIMO 10
-            // Formato: { name: "Nombre canción", file: "music/tu-archivo.mp3" }
+            { 
+                name: "🎵 Canción de la comunidad", 
+                file: "music/track1.mp3" 
+            }
+            // Agrega más tracks aquí
         ];
+        this.currentTrackIndex = 0;
+        this.audioContext = null;
+        this.audioBuffer = null;
+        this.source = null;
         this.isPlaying = false;
-        this.currentAudio = null;
+        this.isLoading = false;
     }
 
-    init() {
+    async init() {
         this.createPlayerUI();
+        await this.initializeAudio();
+    }
+
+    async initializeAudio() {
+        try {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            console.log('✅ AudioContext inicializado');
+        } catch (error) {
+            console.error('❌ Error inicializando AudioContext:', error);
+            this.showError('Audio no soportado en este navegador');
+        }
     }
 
     createPlayerUI() {
         const playerHTML = `
             <div class="music-player">
                 <button id="musicToggle">🎵</button>
-                <span id="nowPlaying">Música comunal</span>
-                <button id="nextTrack">⏭️</button>
+                <div class="player-info">
+                    <span id="nowPlaying">Música Comunal TCSACM</span>
+                    <div class="player-controls">
+                        <button id="prevTrack">⏮️</button>
+                        <button id="nextTrack">⏭️</button>
+                    </div>
+                </div>
+                <div class="loading-spinner" id="loadingSpinner" style="display: none;">⏳</div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', playerHTML);
 
         document.getElementById('musicToggle').addEventListener('click', () => this.togglePlay());
+        document.getElementById('prevTrack').addEventListener('click', () => this.prevTrack());
         document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
     }
 
-    togglePlay() {
+    async togglePlay() {
+        if (this.isLoading) return;
+        
         if (this.isPlaying) {
             this.stop();
         } else {
-            this.playRandom();
+            await this.playCurrentTrack();
         }
     }
 
-    playRandom() {
-        if (this.currentAudio) {
-            this.currentAudio.pause();
-        }
-
-        // Verificar que hay tracks disponibles
-        if (this.tracks.length === 0) {
-            console.log('❌ No hay tracks disponibles');
-            document.getElementById('nowPlaying').textContent = "No hay música disponible";
-            return;
-        }
-
-        const randomTrack = this.tracks[Math.floor(Math.random() * this.tracks.length)];
-        console.log('🎵 Intentando reproducir:', randomTrack.file);
-    
-        this.currentAudio = new Audio(randomTrack.file);
-    
-        this.currentAudio.play().then(() => {
+    async playCurrentTrack() {
+        if (this.isLoading) return;
+        
+        const track = this.tracks[this.currentTrackIndex];
+        console.log('🎵 Intentando reproducir:', track.file);
+        
+        this.isLoading = true;
+        this.showLoading(true);
+        
+        try {
+            // Cargar el archivo de audio
+            await this.loadAudioFile(track.file);
+            
+            // Reproducir
+            this.source = this.audioContext.createBufferSource();
+            this.source.buffer = this.audioBuffer;
+            this.source.connect(this.audioContext.destination);
+            this.source.start(0);
+            
             this.isPlaying = true;
+            this.isLoading = false;
+            this.showLoading(false);
+            
             document.getElementById('musicToggle').textContent = '⏸️';
-            document.getElementById('nowPlaying').textContent = randomTrack.name;
-            console.log('✅ Reproduciendo:', randomTrack.name);
-        }).catch(error => {
-            console.log('❌ Error al reproducir:', error);
-            document.getElementById('nowPlaying').textContent = "Click en 🎵 para reproducir";
-            // Mostrar mensaje más específico
-            if (error.name === 'NotSupportedError') {
-                document.getElementById('nowPlaying').textContent = "Formato no soportado";
-            } else if (error.name === 'NotAllowedError') {
-                document.getElementById('nowPlaying').textContent = "Click para permitir audio";
-            }
+            document.getElementById('nowPlaying').textContent = `Sonando: ${track.name}`;
+            
+            this.source.onended = () => {
+                this.isPlaying = false;
+                document.getElementById('musicToggle').textContent = '🎵';
+                document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
+                console.log('🎵 Canción terminada');
+            };
+            
+            console.log('✅ Reproduciendo:', track.name);
+            
+        } catch (error) {
+            console.error('❌ Error reproduciendo:', error);
+            this.isLoading = false;
+            this.showLoading(false);
+            this.showError('Error cargando audio');
+        }
+    }
+
+    async loadAudioFile(url) {
+        return new Promise((resolve, reject) => {
+            console.log('📥 Cargando archivo:', url);
+        
+            const request = new XMLHttpRequest();
+            request.open('GET', url, true);
+            request.responseType = 'arraybuffer';
+        
+            request.onload = () => {
+                if (request.status === 200) {
+                    console.log('📦 Archivo cargado, tamaño:', request.response.byteLength);
+                
+                    this.audioContext.decodeAudioData(request.response, 
+                        (buffer) => {
+                            this.audioBuffer = buffer;
+                            console.log('✅ Audio decodificado');
+                            resolve();
+                        },
+                        (error) => {
+                            console.error('❌ Error decodificando audio:', error);
+                            reject(error);
+                        }
+                    );
+                } else {
+                    reject(new Error(`HTTP error! status: ${request.status}`));
+                }
+            };
+        
+            request.onerror = () => {
+                reject(new Error('Network error'));
+            };
+        
+            request.send();
         });
-
-    this.currentAudio.addEventListener('ended', () => {
-        console.log('🎵 Canción terminada, siguiente...');
-        setTimeout(() => this.nextTrack(), 2000);
-    });
-
-    this.currentAudio.addEventListener('error', (e) => {
-        console.error('❌ Error de audio:', e);
-        document.getElementById('nowPlaying').textContent = "Error cargando audio";
-    });
-}
-
-    nextTrack() {
-        this.playRandom();
     }
 
     stop() {
-        if (this.currentAudio) {
-            this.currentAudio.pause();
-            this.currentAudio.currentTime = 0;
+        if (this.source) {
+            this.source.stop();
+            this.source = null;
         }
         this.isPlaying = false;
         document.getElementById('musicToggle').textContent = '🎵';
-        document.getElementById('nowPlaying').textContent = 'Música pausada';
+        document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
+    }
+
+    async nextTrack() {
+        this.stop();
+        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
+        
+        if (this.isPlaying) {
+            await this.playCurrentTrack();
+        } else {
+            const track = this.tracks[this.currentTrackIndex];
+            document.getElementById('nowPlaying').textContent = `Siguiente: ${track.name}`;
+        }
+    }
+
+    async prevTrack() {
+        this.stop();
+        this.currentTrackIndex = (this.currentTrackIndex - 1 + this.tracks.length) % this.tracks.length;
+        
+        if (this.isPlaying) {
+            await this.playCurrentTrack();
+        } else {
+            const track = this.tracks[this.currentTrackIndex];
+            document.getElementById('nowPlaying').textContent = `Anterior: ${track.name}`;
+        }
+    }
+
+    showLoading(show) {
+        const spinner = document.getElementById('loadingSpinner');
+        spinner.style.display = show ? 'block' : 'none';
+    }
+
+    showError(message) {
+        document.getElementById('nowPlaying').textContent = message;
+        document.getElementById('musicToggle').textContent = '🎵';
     }
 }
 
