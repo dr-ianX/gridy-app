@@ -2,6 +2,108 @@ const WebSocket = require('ws');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { GoogleSpreadsheet } = require('google-spreadsheet');
+
+// 🎯 CONFIGURACIÓN SACM TRACKER
+class SACMTracker {
+    constructor() {
+        this.doc = null;
+        this.sheet = null;
+        this.temporaryPlays = [];
+        this.initialized = false;
+    }
+
+    async init() {
+        try {
+            if (!process.env.GOOGLE_SERVICE_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.SHEET_ID) {
+                console.log('⚠️  Google Sheets no configurado - usando memoria temporal');
+                return;
+            }
+
+            this.doc = new GoogleSpreadsheet(process.env.SHEET_ID);
+            
+            await this.doc.useServiceAccountAuth({
+                client_email: process.env.GOOGLE_SERVICE_EMAIL,
+                private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+            });
+
+            await this.doc.loadInfo();
+            this.sheet = this.doc.sheetsByIndex[0];
+            this.initialized = true;
+            
+            console.log('✅ Google Sheets conectado para SACM tracking');
+        } catch (error) {
+            console.error('❌ Error inicializando Google Sheets:', error.message);
+        }
+    }
+
+    async trackPlay(songId, userId, duration) {
+        const playData = {
+            timestamp: new Date().toISOString(),
+            song_id: songId,
+            user_hash: userId ? this.hashCode(userId) : 'anonymous',
+            duration_seconds: duration,
+            country: 'MX'
+        };
+
+        console.log('🎵 SACM Play:', playData);
+
+        // Intentar guardar en Google Sheets
+        if (this.initialized && this.sheet) {
+            try {
+                await this.sheet.addRow(playData);
+                console.log('✅ Play guardado en Google Sheets');
+                return;
+            } catch (error) {
+                console.error('❌ Error guardando en Sheets:', error.message);
+            }
+        }
+
+        // Fallback: memoria temporal
+        this.temporaryPlays.push(playData);
+        console.log('📦 Play guardado en memoria temporal');
+    }
+
+    hashCode(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = ((hash << 5) - hash) + str.charCodeAt(i);
+            hash |= 0;
+        }
+        return Math.abs(hash).toString(16);
+    }
+
+    async generateReport() {
+        let allPlays = [...this.temporaryPlays];
+
+        if (this.initialized && this.sheet) {
+            try {
+                const rows = await this.sheet.getRows();
+                const sheetPlays = rows.map(row => ({
+                    timestamp: row.timestamp,
+                    song_id: row.song_id,
+                    user_hash: row.user_hash,
+                    duration_seconds: row.duration_seconds,
+                    country: row.country
+                }));
+                allPlays = [...sheetPlays, ...allPlays];
+            } catch (error) {
+                console.error('❌ Error obteniendo datos de Sheets:', error);
+            }
+        }
+
+        const csvHeader = 'timestamp,song_id,user_hash,duration_seconds,country\n';
+        const csvRows = allPlays.map(play => 
+            `"${play.timestamp}","${play.song_id}","${play.user_hash}",${play.duration_seconds},"${play.country}"`
+        ).join('\n');
+        
+        return csvHeader + csvRows;
+    }
+}
+
+// Inicializar tracker
+const sacmTracker = new SACMTracker();
+sacmTracker.init();
 
 // Configuración de tipos MIME
 const mimeTypes = {
@@ -139,8 +241,27 @@ function handleMessage(socket, data) {
         case 'heartbeat':
             socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
             break;
+        // 🎯 NUEVO: Tracking de música para SACM
+        case 'music_play_complete':
+            sacmTracker.trackPlay(data.songId, data.userId, data.duration);
+            break;
     }
 }
+
+// 🎯 NUEVO ENDPOINT PARA DESCARGAR REPORTES
+server.on('request', (req, res) => {
+    // Endpoint para reporte SACM
+    if (req.url === '/sacm-report' && req.method === 'GET') {
+        sacmTracker.generateReport().then(csv => {
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', 'attachment; filename="sacm-report.csv"');
+            res.end(csv);
+        }).catch(error => {
+            res.writeHead(500);
+            res.end('Error generando reporte: ' + error.message);
+        });
+        return;
+    }
 
 // 🎵 MEJORADO: Manejar nueva publicación con sistema de tipos
 function handleNewPost(socket, data) {
@@ -307,4 +428,5 @@ server.listen(PORT, () => {
     console.log('   - Posts de compositores: ILIMITADOS');
     console.log('   - Letras, acordes, eventos, colaboraciones, proyectos');
     console.log('   - Sistema de badges y efectos visuales');
+});
 });
