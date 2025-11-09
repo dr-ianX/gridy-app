@@ -565,8 +565,13 @@ class MusicPlayer {
     constructor() {
         this.tracks = [
             { 
-                name: "🎵 Canción de la comunidad", 
+                name: "🎵 4 - dR.iAn", 
                 file: "music/track1.mp3" 
+            },
+            
+            { 
+                name: "🎵 Me Reconozco - Rodrigo Escamilla", 
+                file: "music/mereconozco.mp3" 
             }
             // Agrega más tracks aquí
         ];

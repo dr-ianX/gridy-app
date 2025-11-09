@@ -14,7 +14,13 @@ const removeCSP = (req, res, next) => {
 
 const server = http.createServer((req, res) => {
     let filePath = req.url === '/' ? '/index.html' : req.url;
-    filePath = path.join(__dirname, 'public', filePath);
+    
+    // 🛠️ CORREGIR: Manejar rutas de archivos estáticos correctamente
+    if (filePath.startsWith('/music/')) {
+        filePath = path.join(__dirname, 'public', filePath);
+    } else {
+        filePath = path.join(__dirname, 'public', filePath);
+    }
     
     const extname = String(path.extname(filePath)).toLowerCase();
     const mimeTypes = {
