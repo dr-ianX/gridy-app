@@ -6,7 +6,7 @@ class GridyClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentPost = null;
-        this.musicPlayer = new MusicPlayer(); // 🎵 NUEVA LÍNEA
+        this.musicPlayer = new MusicPlayer();
         
         this.init();
     }
@@ -16,9 +16,10 @@ class GridyClient {
         this.loadUser();
         this.setupEventListeners();
         this.connect();
-        this.loadTheme(); // Cargar tema al iniciar
+        this.loadTheme();
         this.startVisualDecay();
-        this.musicPlayer.init(); // 🎵 NUEVA LÍNEA
+        this.musicPlayer.init();
+        this.createComposerFeatures();
     }
     
     loadUser() {
@@ -43,6 +44,9 @@ class GridyClient {
     setupEventListeners() {
         console.log('📝 Configurando eventos...');
         
+        // Configurar subida de avatares
+        this.setupAvatarUpload();
+
         // Nickname
         document.getElementById('saveNickname').addEventListener('click', () => this.saveUserNickname());
         document.getElementById('nicknameInput').addEventListener('keypress', (e) => {
@@ -86,7 +90,107 @@ class GridyClient {
         console.log('✅ Eventos configurados');
     }
     
-    // 🎨 TEMA NOCTURNO - FUNCIONES NUEVAS
+    setupAvatarUpload() {
+        const avatarInput = document.createElement('input');
+        avatarInput.type = 'file';
+        avatarInput.accept = 'image/*';
+        avatarInput.style.display = 'none';
+        avatarInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file && file.size < 2 * 1024 * 1024) { // 2MB max
+                try {
+                    const avatarData = await this.uploadAvatar(file);
+                    // Guardar avatar en el usuario actual
+                    if (typeof this.currentUser === 'string') {
+                        // Si currentUser es solo un string, guardamos en localStorage
+                        localStorage.setItem('gridy_avatar', avatarData);
+                    }
+                    this.renderGrid();
+                } catch (error) {
+                    alert('Error subiendo avatar');
+                }
+            } else {
+                alert('Archivo muy grande (máx 2MB)');
+            }
+        });
+        document.body.appendChild(avatarInput);
+
+        // Botón para subir avatar
+        const avatarBtn = document.createElement('button');
+        avatarBtn.textContent = '📷';
+        avatarBtn.className = 'avatar-upload-btn';
+        avatarBtn.onclick = () => avatarInput.click();
+        document.body.appendChild(avatarBtn);
+    }
+
+    async uploadAvatar(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                resolve(e.target.result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    createComposerFeatures() {
+        const composerPanel = document.createElement('div');
+        composerPanel.className = 'composer-panel';
+        composerPanel.innerHTML = `
+            <h4>🎵 Para Compositores TCSACM</h4>
+            <button id="shareLyrics">📝 Compartir Letras</button>
+            <button id="shareChords">🎸 Compartir Acordes</button>
+            <button id="findCollaboration">🤝 Buscar Colaboración</button>
+            <button id="shareEvent">📅 Compartir Evento</button>
+        `;
+    
+        document.querySelector('.container').prepend(composerPanel);
+    
+        // Event listeners para las nuevas funciones
+        document.getElementById('shareLyrics').addEventListener('click', () => {
+            this.openLyricsModal();
+        });
+        document.getElementById('shareChords').addEventListener('click', () => {
+            this.openChordsModal();
+        });
+        document.getElementById('findCollaboration').addEventListener('click', () => {
+            this.openCollaborationModal();
+        });
+        document.getElementById('shareEvent').addEventListener('click', () => {
+            this.openEventModal();
+        });
+    }
+
+    openLyricsModal() {
+        const lyrics = prompt('Comparte tus letras o acordes:');
+        if (lyrics) {
+            this.sendPost(`🎵 COMPOSICIÓN:\n${lyrics}`);
+        }
+    }
+
+    openChordsModal() {
+        const chords = prompt('Comparte la progresión de acordes:');
+        if (chords) {
+            this.sendPost(`🎸 ACORDES:\n${chords}`);
+        }
+    }
+
+    openCollaborationModal() {
+        const collaboration = prompt('¿Qué buscas para colaborar? (ej: "Baterista para canción rock")');
+        if (collaboration) {
+            this.sendPost(`🤝 BUSCO COLABORACIÓN:\n${collaboration}`);
+        }
+    }
+
+    openEventModal() {
+        const event = prompt('Comparte tu evento (fecha, lugar, etc.):');
+        if (event) {
+            this.sendPost(`📅 EVENTO:\n${event}`);
+        }
+    }
+    
+    // 🎨 TEMA NOCTURNO - FUNCIONES
     loadTheme() {
         const savedTheme = localStorage.getItem('gridy_theme');
         if (savedTheme === 'night') {
@@ -96,7 +200,6 @@ class GridyClient {
     }
 
     createThemeToggle() {
-        // Verificar si ya existe el botón
         if (document.querySelector('.theme-toggle')) return;
         
         const toggleBtn = document.createElement('button');
@@ -112,7 +215,6 @@ class GridyClient {
         const isNightMode = document.body.classList.contains('night-mode');
         localStorage.setItem('gridy_theme', isNightMode ? 'night' : 'day');
         
-        // Cambiar el emoji del botón
         const toggleBtn = document.querySelector('.theme-toggle');
         if (toggleBtn) {
             toggleBtn.innerHTML = isNightMode ? '☀️' : '🌙';
@@ -134,7 +236,6 @@ class GridyClient {
     
     connect() {
         try {
-            // 🎯 DETECTAMOS SI ESTAMOS EN LOCAL O EN PRODUCCIÓN
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const protocol = isLocal ? 'ws:' : 'wss:';
             const wsUrl = isLocal 
@@ -195,7 +296,6 @@ class GridyClient {
             case 'new_post':
                 this.posts.unshift(data.post);
                 this.renderGrid();
-                // Efecto visual para nuevo post
                 this.highlightNewPost(data.post.id);
                 break;
                 
@@ -215,7 +315,6 @@ class GridyClient {
             post.comments.push(data.comment);
             post.interactions = data.newInteractions;
             
-            // Si estamos viendo este post, actualizar comentarios
             if (this.currentPost && this.currentPost.id === data.postId) {
                 this.addCommentToDOM(data.comment);
             }
@@ -230,7 +329,6 @@ class GridyClient {
         
         gridContainer.innerHTML = '';
 
-
         if (this.posts.length === 0) {
             gridContainer.innerHTML = `
                 <div class="loading">
@@ -242,19 +340,14 @@ class GridyClient {
             return;
         }
         
-        // Ordenar posts por interacciones (los más populares primero)
         const sortedPosts = [...this.posts].sort((a, b) => b.interactions - a.interactions);
-        
-        // Crear columnas para masonry layout
         const columnCount = Math.min(4, Math.max(2, Math.floor(window.innerWidth / 300)));
         const columns = Array.from({ length: columnCount }, () => []);
         
-        // Distribuir posts en columnas
         sortedPosts.forEach((post, index) => {
             columns[index % columnCount].push(post);
         });
         
-        // Crear estructura de columnas
         columns.forEach(columnPosts => {
             const column = document.createElement('div');
             column.className = 'masonry-column';
@@ -267,7 +360,6 @@ class GridyClient {
             gridContainer.appendChild(column);
         });
 
-        // 🎯 CONFIGURAR REACCIONES DESPUÉS DE RENDERIZAR
         setTimeout(() => {
             this.setupReactionEvents();
         }, 100);
@@ -276,20 +368,20 @@ class GridyClient {
     createPostCell(post) {
         const cell = document.createElement('div');
         
-        // Tamaño dinámico basado en interacciones actuales
         let sizeClass = 'small';
         if (post.interactions >= 15) sizeClass = 'xlarge';
         else if (post.interactions >= 10) sizeClass = 'large';
         else if (post.interactions >= 5) sizeClass = 'medium';
         
         cell.className = `post-cell ${sizeClass}`;
-        
-        // Animación única para cada celda
         cell.style.animationDelay = `${Math.random() * 4}s`;
+        
+        // Obtener avatar personalizado o usar emoji por defecto
+        const userAvatar = localStorage.getItem('gridy_avatar') || this.getUserAvatar(post.user);
         
         cell.innerHTML = `
             <div class="interaction-count">${post.interactions} 💫</div>
-            <div class="user-avatar">${this.getUserAvatar(post.user)}</div>
+            <div class="user-avatar">${userAvatar}</div>
             <div class="user-name">${post.user}</div>
             <div class="post-content">${post.content}</div>
             ${this.addQuickReactions(post)}
@@ -299,7 +391,6 @@ class GridyClient {
         return cell;
     }
     
-    // 🎉 REACCIONES RÁPIDAS - VERSIÓN CORREGIDA
     addQuickReactions(post) {
         const reactions = ['🔥', '❤️', '😂', '🎉', '👀', '💫'];
         const reactionsHTML = reactions.map(reaction => 
@@ -313,16 +404,13 @@ class GridyClient {
         `;
     }
 
-    // 🎯 CONFIGURAR EVENTOS DE REACCIONES - VERSIÓN MEJORADA
     setupReactionEvents() {
         const reactionElements = document.querySelectorAll('.reaction');
     
         reactionElements.forEach(reactionEl => {
-            // Remover event listeners existentes para evitar duplicados
             const newReactionEl = reactionEl.cloneNode(true);
             reactionEl.parentNode.replaceChild(newReactionEl, reactionEl);
         
-            // Agregar nuevo event listener
             newReactionEl.addEventListener('click', (event) => {
                 event.stopPropagation();
                 const reaction = newReactionEl.getAttribute('data-reaction');
@@ -334,7 +422,6 @@ class GridyClient {
         });
     }
 
-    // 📤 ENVIAR REACCIÓN - VERSIÓN MEJORADA
     sendReaction(postId, reaction) {
         console.log('🚀 Enviando reacción:', { 
             postId: postId, 
@@ -342,13 +429,12 @@ class GridyClient {
             reaction: reaction 
         });
     
-        // Asegurar que postId es string
         const postIdStr = String(postId);
     
         if (this.socket?.readyState === WebSocket.OPEN) {
             this.socket.send(JSON.stringify({
                 type: 'new_comment',
-                postId: postIdStr, // Enviar como string
+                postId: postIdStr,
                 user: this.currentUser,
                 text: reaction
             }));
@@ -369,7 +455,6 @@ class GridyClient {
         document.getElementById('postTitle').textContent = `Comentarios de ${post.user}`;
         document.getElementById('postContent').textContent = post.content;
         
-        // Mostrar comentarios existentes
         const commentsList = document.getElementById('commentsList');
         commentsList.innerHTML = '';
         post.comments.forEach(comment => {
@@ -387,7 +472,6 @@ class GridyClient {
         commentItem.textContent = `${comment.user}: ${comment.text}`;
         commentsList.appendChild(commentItem);
         
-        // Auto-scroll al último comentario
         commentsList.scrollTop = commentsList.scrollHeight;
     }
     
@@ -434,7 +518,6 @@ class GridyClient {
             document.getElementById('commentInput').value = '';
             document.getElementById('commentInput').focus();
             
-            // Feedback visual
             const submitComment = document.getElementById('submitComment');
             submitComment.textContent = '¡Comentado! ✓';
             setTimeout(() => {
@@ -497,7 +580,6 @@ class GridyClient {
     }
     
     highlightNewPost(postId) {
-        // Efecto visual para nuevo post
         const cells = document.querySelectorAll('.post-cell');
         cells.forEach(cell => {
             if (cell.querySelector('.user-name')?.textContent === this.currentUser) {
@@ -509,34 +591,10 @@ class GridyClient {
         });
     }
 
-    // 🎯 CONFIGURAR EVENTOS DE REACCIONES DESPUÉS DE RENDERIZAR
-setupReactionEvents() {
-    // Esperar un momento para que el DOM se actualice
-    setTimeout(() => {
-        const reactionElements = document.querySelectorAll('.reaction');
-        reactionElements.forEach(reactionEl => {
-            // Remover event listeners antiguos para evitar duplicados
-            reactionEl.replaceWith(reactionEl.cloneNode(true));
-        });
-
-        // Agregar nuevos event listeners
-        const newReactionElements = document.querySelectorAll('.reaction');
-        newReactionElements.forEach(reactionEl => {
-            reactionEl.addEventListener('click', (event) => {
-                event.stopPropagation();
-                const reaction = reactionEl.getAttribute('data-reaction');
-                const postId = reactionEl.closest('.quick-reactions').getAttribute('data-postid');
-                this.sendReaction(postId, reaction);
-            });
-        });
-    }, 100);
-}
-
-    // Sistema de decaimiento visual (como Bejeweled)
     startVisualDecay() {
         setInterval(() => {
             this.applyVisualDecay();
-        }, 30000); // Cada 30 segundos
+        }, 30000);
     }
 
     applyVisualDecay() {
@@ -545,10 +603,9 @@ setupReactionEvents() {
         const oneHour = 60 * 60 * 1000;
 
         this.posts.forEach(post => {
-            // Posts más viejos pierden más interacciones
             const hoursOld = (now - post.timestamp) / oneHour;
             if (hoursOld > 1 && post.interactions > 0) {
-                const decay = Math.floor(hoursOld / 2); // +1 decay por cada 2 horas
+                const decay = Math.floor(hoursOld / 2);
                 post.interactions = Math.max(0, post.interactions - decay);
                 hasChanges = true;
             }
@@ -560,7 +617,7 @@ setupReactionEvents() {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO INTEGRADO - WEB AUDIO API
+// 🎵 REPRODUCTOR DE AUDIO INTEGRADO
 class MusicPlayer {
     constructor() {
         this.tracks = [
@@ -568,12 +625,10 @@ class MusicPlayer {
                 name: "🎵 4 - dR.iAn", 
                 file: "music/track1.mp3" 
             },
-            
             { 
                 name: "🎵 Me Reconozco - Rodrigo Escamilla", 
                 file: "music/mereconozco.mp3" 
             }
-            // Agrega más tracks aquí
         ];
         this.currentTrackIndex = 0;
         this.audioContext = null;
@@ -639,10 +694,8 @@ class MusicPlayer {
         this.showLoading(true);
         
         try {
-            // Cargar el archivo de audio
             await this.loadAudioFile(track.file);
             
-            // Reproducir
             this.source = this.audioContext.createBufferSource();
             this.source.buffer = this.audioBuffer;
             this.source.connect(this.audioContext.destination);
