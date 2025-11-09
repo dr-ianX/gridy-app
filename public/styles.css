@@ -77,6 +77,11 @@ body {
     font-size: 2.5em;
     margin-bottom: 10px;
     filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .user-name {
@@ -540,28 +545,6 @@ body {
     }
 }
 
-/* Avatar upload button */
-.avatar-upload-btn {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    border-radius: 50%;
-    width: 50px;
-    height: 50px;
-    cursor: pointer;
-    font-size: 24px;
-    z-index: 1000;
-    backdrop-filter: blur(10px);
-    transition: all 0.3s ease;
-}
-
-.avatar-upload-btn:hover {
-    transform: scale(1.1);
-    background: rgba(255, 255, 255, 0.3);
-}
-
 /* Panel de compositores */
 .composer-panel {
     background: rgba(255, 255, 255, 0.15);
@@ -593,32 +576,4 @@ body {
 .composer-panel button:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateY(-2px);
-}
-
-/* Avatar images */
-.avatar-image {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-}
-
-.user-avatar img.avatar-image {
-    font-size: 0; /* Oculta texto alternativo */
-}
-
-/* Mejorar el contenedor del avatar */
-.user-avatar {
-    width: 50px;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 10px;
-}
-
-/* Ajustar tamaño de emoji para que coincida con imágenes */
-.user-avatar:not(:has(img)) {
-    font-size: 2.5em;
 }
