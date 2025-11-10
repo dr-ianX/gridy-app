@@ -685,6 +685,10 @@ class MusicPlayer {
             { 
                 name: "🎵 Me Reconozco - Rodrigo Escamilla", 
                 file: "/Music/mereconozco.mp3" 
+            },
+            { 
+                name: "🎵 Toda La Noche - Mariu", 
+                file: "/Music/mariutodalanoche.mp3" 
             }
         ];
         this.currentTrackIndex = 0;
