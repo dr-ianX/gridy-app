@@ -100,7 +100,10 @@ class SACMTracker {
                     song_id: row.song_id,
                     user_hash: row.user_hash,
                     duration_seconds: row.duration_seconds,
-                    country: row.country
+                    country: row.country,
+                    isrc: row.isrc,
+                    registro_indautor: row.registro_indautor,
+                    registro_rACM: row.registro_sacm
                 }));
                 allPlays = [...sheetPlays, ...allPlays];
             } catch (error) {
