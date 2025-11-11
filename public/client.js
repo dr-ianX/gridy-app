@@ -21,11 +21,12 @@ class GridyClient {
         this.startVisualDecay();
         this.createComposerFeatures();
         this.createDynamicBackground();
-        // 🎯 INICIALIZAR MUSIC PLAYER DESPUÉS DE CREAR LA UI
-        setTimeout(() => {
-            this.musicPlayer.init();
-        }, 1000);
-    }
+        // 🎯 INICIALIZAR MUSIC PLAYER CON RETRASO PARA MÓVILES
+    setTimeout(() => {
+        this.musicPlayer.init();
+        console.log('🎵 Music Player inicializado para móviles');
+    }, 1500);
+}
     
     loadUser() {
         const savedNickname = localStorage.getItem('gridy_nickname');
