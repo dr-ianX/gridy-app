@@ -936,7 +936,7 @@ body.composer-mode .post-cell {
 }
 
 /* 🆕 MEJORAS PARA DISPOSITIVOS PEQUEÑOS */
-@media (max-width: 480px) {
+@media (max-width: 2400px) {
     .music-player {
         bottom: 15px;
         left: 10px;
@@ -964,7 +964,7 @@ body.composer-mode .post-cell {
 }
 
 /* 🆕 ESTILOS ESPECÍFICOS PARA BRAVE MOBILE */
-@media (max-width: 768px) and (hover: none) {
+@media (max-width: 358px) and (hover: none) {
     .music-player {
         background: rgba(255, 255, 255, 0.25);
         border: 2px solid rgba(255, 255, 255, 0.4);
