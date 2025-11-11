@@ -263,7 +263,7 @@ class GridyClient {
             const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
             const protocol = isLocal ? 'ws:' : 'wss:';
             const wsUrl = isLocal 
-                ? `${protocol}//${window.location.hostname}:${window.location.port || 8000}`
+                ? `${protocol}//${window.location.hostname}:${window.location.port || 10000}`
                 : `${protocol}//${window.location.host}`;
             
             console.log(`🔗 Conectando a: ${wsUrl}`);
