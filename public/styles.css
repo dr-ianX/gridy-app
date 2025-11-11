@@ -744,3 +744,80 @@ body.composer-mode .post-cell {
         margin: 15px;
     }
 }
+
+/* 🆕 FONDO DINÁMICO */
+.dynamic-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.15;
+    z-index: -1;
+    transition: opacity 2s ease, background-image 2s ease;
+    filter: blur(8px) brightness(0.8);
+    pointer-events: none;
+}
+
+/* 🆕 BOTÓN DE RESOLUCIÓN */
+.resolve-btn {
+    background: rgba(76, 175, 80, 0.9);
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 0.75em;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.resolve-btn:hover {
+    background: rgba(76, 175, 80, 1);
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.night-mode .resolve-btn {
+    background: rgba(56, 142, 60, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.night-mode .resolve-btn:hover {
+    background: rgba(56, 142, 60, 1);
+}
+
+/* 🆕 MEJORAS DE RESPONSIVE */
+@media (max-width: 768px) {
+    .resolve-btn {
+        padding: 5px 10px;
+        font-size: 0.7em;
+    }
+    
+    .dynamic-bg {
+        opacity: 0.1; /* Más transparente en móviles */
+    }
+}
+
+/* 🆕 EFECTOS ESPECIALES PARA POSTS IMPORTANTES */
+.post-cell[data-important="true"] {
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    background: linear-gradient(135deg, rgba(255,255,255,0.25), rgba(255,255,255,0.15)) padding-box;
+}
+
+/* 🆕 INDICADOR DE POST PERSISTENTE */
+.persistent-badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: rgba(255, 193, 7, 0.9);
+    color: #333;
+    padding: 3px 6px;
+    border-radius: 8px;
+    font-size: 0.6em;
+    font-weight: bold;
+}

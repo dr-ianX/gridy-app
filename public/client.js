@@ -6,8 +6,8 @@ class GridyClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentPost = null;
-        this.musicPlayer = new MusicPlayer();
-        this.composerMode = true; // Todos pueden ser compositores por ahora
+        this.musicPlayer = new MusicPlayer(this); // Pasamos la referencia del cliente
+        this.composerMode = true;
         
         this.init();
     }
@@ -21,6 +21,7 @@ class GridyClient {
         this.startVisualDecay();
         this.musicPlayer.init();
         this.createComposerFeatures();
+        this.createDynamicBackground(); // 🆕 Fondo dinámico
     }
     
     loadUser() {
@@ -140,6 +141,25 @@ class GridyClient {
         });
     }
 
+    // 🆕 CREAR FONDO DINÁMICO
+    createDynamicBackground() {
+        if (document.getElementById('dynamicBackground')) return;
+        
+        const bg = document.createElement('div');
+        bg.id = 'dynamicBackground';
+        bg.className = 'dynamic-bg';
+        document.body.appendChild(bg);
+    }
+
+    // 🆕 ACTUALIZAR FONDO SEGÚN CANCIÓN
+    updateDynamicBackground(imageUrl) {
+        const bg = document.getElementById('dynamicBackground');
+        if (bg && imageUrl) {
+            bg.style.backgroundImage = `url(${imageUrl})`;
+            bg.style.opacity = '0.15'; // 🎯 Ajusta la opacidad para mejor legibilidad
+        }
+    }
+
     openComposerModal(postType) {
         const configs = {
             lyrics: {
@@ -178,7 +198,6 @@ class GridyClient {
         const content = prompt(config.title + '\n\n' + config.placeholder);
         
         if (content) {
-            // 🎯 POST ESPECIAL - SIN LÍMITE DIARIO
             this.sendPost(config.prefix + content, 'composer');
         }
     }
@@ -282,6 +301,10 @@ class GridyClient {
             case 'welcome':
                 console.log('👋', data.message);
                 this.posts = data.posts || [];
+                // 🎯 Sincronizar música con el servidor
+                if (data.musicState) {
+                    this.musicPlayer.syncWithServer(data.musicState);
+                }
                 this.renderGrid();
                 break;
                 
@@ -297,6 +320,17 @@ class GridyClient {
                 
             case 'error':
                 alert(`Error: ${data.message}`);
+                break;
+
+            // 🎯 Actualización de música sincronizada
+            case 'music_update':
+                this.musicPlayer.syncWithServer(data.musicState);
+                break;
+
+            // 🆕 Post removido (resuelto)
+            case 'post_removed':
+                this.posts = this.posts.filter(p => p.id !== data.postId);
+                this.renderGrid();
                 break;
         }
     }
@@ -354,6 +388,7 @@ class GridyClient {
 
         setTimeout(() => {
             this.setupReactionEvents();
+            this.setupResolveButtons(); // 🆕 Configurar botones de resolución
         }, 100);
     }
     
@@ -377,6 +412,7 @@ class GridyClient {
             <div class="user-name">${post.user}</div>
             <div class="post-content">${post.content}</div>
             ${this.addQuickReactions(post)}
+            ${this.addResolveButton(post)} <!-- 🆕 Botón de resolución -->
         `;
         
         cell.addEventListener('click', () => this.openPostModal(post));
@@ -387,13 +423,68 @@ class GridyClient {
         return cell;
     }
 
-    // 🎵 NUEVO: Calcular tamaño inteligente
+    // 🆕 AÑADIR BOTÓN DE RESOLUCIÓN PARA COLABORACIONES Y BÚSQUEDAS
+    addResolveButton(post) {
+        const isCollaboration = post.content.includes('🤝 COLABORACIÓN:') || post.content.includes('🔍 BUSCO:');
+        const isAuthor = post.user === this.currentUser;
+        
+        if (isCollaboration && isAuthor && !post.isResolved) {
+            return `
+                <button class="resolve-btn" onclick="window.gridyApp.resolvePost('${post.id}')" 
+                        title="Marcar como resuelto">
+                    ✅ Resuelto
+                </button>
+            `;
+        }
+        return '';
+    }
+
+    // 🆕 CONFIGURAR BOTONES DE RESOLUCIÓN
+    setupResolveButtons() {
+        document.querySelectorAll('.resolve-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const postId = e.target.closest('.post-cell').querySelector('.quick-reactions').getAttribute('data-postid');
+                this.resolvePost(postId);
+            });
+        });
+    }
+
+    // 🆕 RESOLVER POST (marcar como completado)
+    resolvePost(postId) {
+        if (!confirm('¿Estás seguro de que quieres marcar este post como resuelto? Esto lo eliminará de la vista.')) {
+            return;
+        }
+
+        fetch(`/resolve-post/${postId}`, { 
+            method: 'POST' 
+        })
+        .then(response => {
+            if (response.ok) {
+                console.log('✅ Post marcado como resuelto');
+                // El post se eliminará automáticamente cuando llegue el broadcast
+            } else {
+                alert('Error al marcar el post como resuelto');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        });
+    }
+
+    // 🎵 Calcular tamaño inteligente
     calculatePostSize(post) {
         const baseInteractions = post.interactions;
         const contentLength = post.content.length;
         
-        // Posts largos o con muchas interacciones son más grandes
-        let sizeScore = baseInteractions + (contentLength / 100);
+        // 🎯 Posts importantes son más grandes por defecto
+        let importanceBonus = 0;
+        if (this.isImportantPost(post)) {
+            importanceBonus = 5;
+        }
+        
+        let sizeScore = baseInteractions + (contentLength / 100) + importanceBonus;
         
         if (sizeScore >= 20) return 'xlarge';
         if (sizeScore >= 15) return 'large';
@@ -401,7 +492,15 @@ class GridyClient {
         return 'small';
     }
 
-    // 🎵 NUEVO: Indicador del tipo de contenido
+    // 🎵 Identificar posts importantes
+    isImportantPost(post) {
+        return post.content.includes('🤝 COLABORACIÓN:') ||
+               post.content.includes('🔍 BUSCO:') || 
+               post.content.includes('💿 PROYECTO:') ||
+               post.content.includes('📅 EVENTO:');
+    }
+
+    // 🎵 Indicador del tipo de contenido
     getTypeIndicator(post) {
         if (post.content.includes('🎵 LETRAS:')) {
             return '<div class="post-type-badge lyrics-badge">📝 Letras</div>';
@@ -424,7 +523,7 @@ class GridyClient {
         return '';
     }
 
-    // 🎵 NUEVO: Efectos especiales tipo Bejeweled
+    // 🎵 Efectos especiales tipo Bejeweled
     applySpecialEffects(cell, post) {
         // Efecto de glow para posts muy populares
         if (post.interactions >= 15) {
@@ -586,7 +685,7 @@ class GridyClient {
                 type: 'new_post',
                 user: this.currentUser,
                 content: content,
-                postType: postType // ← NUEVO: para posts de compositores
+                postType: postType
             }));
             return true;
         }
@@ -658,11 +757,11 @@ class GridyClient {
         this.posts.forEach(post => {
             const hoursOld = (now - post.timestamp) / oneHour;
             
-            // 🎯 Posts de compositores decaen más lento
-            const decayRate = post.content.includes('🎵') || post.content.includes('🎸') ? 0.5 : 1;
+            // 🎯 Posts importantes decaen más lento
+            const decayRate = this.isImportantPost(post) ? 0.3 : 1;
             
             if (hoursOld > 2 && post.interactions > 0) {
-                const decay = Math.floor((hoursOld / 4) * decayRate);
+                const decay = Math.floor((hoursOld / 6) * decayRate); // Más lento
                 post.interactions = Math.max(0, post.interactions - decay);
                 hasChanges = true;
             }
@@ -674,38 +773,46 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO CON TRACKING SACM MEJORADO
+// 🎵 REPRODUCTOR DE AUDIO MEJORADO CON SINCRONIZACIÓN
 class MusicPlayer {
-    constructor() {
-        this.tracks = [
-            { 
-                name: "🎵 4 - dR.iAn", 
-                file: "/Music/track1.mp3" 
-            },
-            { 
-                name: "🎵 Me Reconozco - Rodrigo Escamilla", 
-                file: "/Music/mereconozco.mp3" 
-            },
-            {   
-                name: "🎵 Toda La Noche - Mariu", 
-                file: "/Music/mariutodalanoche.mp3" 
-            },
-            {   
-                name: "🎵 A Contratiempo - Demian Cobo ft. Daniel Tejeda", 
-                file: "/Music/acontratiempo.mp3" 
-            }
-        ];
+    constructor(gridyClient) {
+        this.gridyClient = gridyClient;
+        this.tracks = [];
         this.currentTrackIndex = 0;
         this.audio = new Audio();
         this.isPlaying = false;
-        this.random = true
         this.trackStartTime = 0;
         this.currentTrackName = '';
+        this.playlist = [];
     }
 
     init() {
         this.createPlayerUI();
         this.setupAudioEvents();
+    }
+
+    // 🎯 SINCRONIZAR CON EL SERVIDOR
+    syncWithServer(musicState) {
+        this.playlist = musicState.playlist;
+        this.currentTrackIndex = musicState.currentTrackIndex;
+        this.isPlaying = musicState.isPlaying;
+
+        console.log('🎵 Sincronizando música:', {
+            track: this.playlist[this.currentTrackIndex]?.name,
+            playing: this.isPlaying
+        });
+
+        // Actualizar UI
+        this.updatePlayerUI();
+
+        // Sincronizar reproducción
+        if (this.isPlaying && !this.audio.paused) {
+            // Ya está reproduciendo, no hacer nada
+        } else if (this.isPlaying && this.audio.paused) {
+            this.playCurrentTrack();
+        } else {
+            this.pause();
+        }
     }
 
     createPlayerUI() {
@@ -728,8 +835,16 @@ class MusicPlayer {
         document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
     }
 
+    updatePlayerUI() {
+        const currentTrack = this.playlist[this.currentTrackIndex];
+        if (currentTrack) {
+            document.getElementById('nowPlaying').textContent = `Sonando: ${currentTrack.name}`;
+            // 🎯 Actualizar fondo dinámico
+            this.gridyClient.updateDynamicBackground(currentTrack.image);
+        }
+    }
+
     setupAudioEvents() {
-        // 🎯 MEJORADO: Un solo event listener para ended que maneje TODO
         this.audio.addEventListener('ended', () => {
             this.handleTrackEnd();
         });
@@ -740,37 +855,38 @@ class MusicPlayer {
         });
     }
 
-    // 🎯 NUEVO: Manejar el fin de la reproducción (tracking + UI)
     handleTrackEnd() {
         const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
         this.completeSACMTracking(this.currentTrackName, duration);
         
-        // Tu código original de UI
-        this.isPlaying = false;
-        document.getElementById('musicToggle').textContent = '🎵';
-        document.getElementById('nowPlaying').textContent = 'Música Comunal TCSACM';
+        // 🎯 Sincronizar con servidor para siguiente canción
+        this.sendMusicCommand('next');
     }
 
     togglePlay() {
         if (this.isPlaying) {
-            this.pause();
+            this.sendMusicCommand('pause');
         } else {
-            this.playCurrentTrack();
+            this.sendMusicCommand('play');
         }
     }
 
     playCurrentTrack() {
-        const track = this.tracks[this.currentTrackIndex];
+        const track = this.playlist[this.currentTrackIndex];
+        if (!track) {
+            console.log('❌ No hay track disponible');
+            return;
+        }
+
         console.log('🎵 Reproduciendo:', track.file);
         
-        // 🎯 Iniciar tracking para SACM
         this.startSACMTracking(track.name);
         
         this.audio.src = track.file;
         this.audio.play().then(() => {
             this.isPlaying = true;
             document.getElementById('musicToggle').textContent = '⏸️';
-            document.getElementById('nowPlaying').textContent = `Sonando: ${track.name}`;
+            this.updatePlayerUI();
         }).catch(error => {
             console.error('❌ Error al reproducir:', error);
             this.showError('No se pudo reproducir');
@@ -782,22 +898,21 @@ class MusicPlayer {
         this.trackStartTime = Date.now();
         this.currentTrackName = trackName;
         
-        // Enviar evento de inicio de reproducción
-        if (window.gridyApp?.socket?.readyState === WebSocket.OPEN) {
-            window.gridyApp.socket.send(JSON.stringify({
+        if (this.gridyClient.socket?.readyState === WebSocket.OPEN) {
+            this.gridyClient.socket.send(JSON.stringify({
                 type: 'music_play_start',
                 songId: trackName,
-                userId: window.gridyApp.currentUser
+                userId: this.gridyClient.currentUser
             }));
         }
     }
 
     completeSACMTracking(trackName, duration) {
-        if (window.gridyApp?.socket?.readyState === WebSocket.OPEN) {
-            window.gridyApp.socket.send(JSON.stringify({
+        if (this.gridyClient.socket?.readyState === WebSocket.OPEN) {
+            this.gridyClient.socket.send(JSON.stringify({
                 type: 'music_play_complete',
                 songId: trackName,
-                userId: window.gridyApp.currentUser,
+                userId: this.gridyClient.currentUser,
                 duration: duration
             }));
             console.log('📊 Tracking SACM enviado:', { trackName, duration });
@@ -809,7 +924,6 @@ class MusicPlayer {
         this.isPlaying = false;
         document.getElementById('musicToggle').textContent = '🎵';
         
-        // 🎯 OPCIONAL: Tracking de pausa (si SACM lo requiere)
         if (this.trackStartTime > 0) {
             const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
             this.completeSACMTracking(this.currentTrackName, duration);
@@ -817,27 +931,24 @@ class MusicPlayer {
     }
 
     nextTrack() {
-        // 🎯 Tracking de la canción actual antes de cambiar
-        if (this.isPlaying && this.trackStartTime > 0) {
-            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
-            this.completeSACMTracking(this.currentTrackName, duration);
-        }
-        
-        this.pause();
-        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.tracks.length;
-        this.playCurrentTrack();
+        this.sendMusicCommand('next');
     }
 
     prevTrack() {
-        // 🎯 Tracking de la canción actual antes de cambiar
-        if (this.isPlaying && this.trackStartTime > 0) {
-            const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
-            this.completeSACMTracking(this.currentTrackName, duration);
+        // En modo sincronizado, no permitimos prev para mantener consistencia
+        console.log('⚠️ Prev track no disponible en modo sincronizado');
+    }
+
+    // 🎯 ENVIAR COMANDOS DE MÚSICA AL SERVIDOR
+    sendMusicCommand(command) {
+        if (this.gridyClient.socket?.readyState === WebSocket.OPEN) {
+            this.gridyClient.socket.send(JSON.stringify({
+                type: 'music_command',
+                command: command
+            }));
+        } else {
+            console.error('❌ WebSocket no conectado para comando de música');
         }
-        
-        this.pause();
-        this.currentTrackIndex = (this.currentTrackIndex - 1 + this.tracks.length) % this.tracks.length;
-        this.playCurrentTrack();
     }
 
     showError(message) {

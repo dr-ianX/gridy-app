@@ -302,15 +302,85 @@ class SACMTracker {
 }
 
 // ============================================================================
+// 🎵 SISTEMA DE MÚSICA SINCRONIZADA
+// ============================================================================
+class SyncedMusicSystem {
+    constructor() {
+        this.tracks = [
+            { 
+                name: "🎵 4 - dR.iAn", 
+                file: "/Music/track1.mp3",
+                image: "/Music/track1.jpg" // 🆕 Imagen de fondo
+            },
+            { 
+                name: "🎵 Me Reconozco - Rodrigo Escamilla", 
+                file: "/Music/mereconozco.mp3",
+                image: "/Music/mereconozco.jpg"
+            },
+            {   
+                name: "🎵 Toda La Noche - Mariu", 
+                file: "/Music/mariutodalanoche.mp3",
+                image: "/Music/mariutodalanoche.jpg"
+            },
+            {   
+                name: "🎵 A Contratiempo - Demian Cobo ft. Daniel Tejeda", 
+                file: "/Music/acontratiempo.mp3",
+                image: "/Music/acontratiempo.jpg"
+            }
+        ];
+        this.currentTrackIndex = 0;
+        this.isPlaying = false;
+        this.playlist = [];
+        this.generateDailyPlaylist();
+    }
+
+    // 🎯 Generar playlist aleatoria pero igual para todos los usuarios
+    generateDailyPlaylist() {
+        // Usar la fecha como semilla para playlist diaria consistente
+        const today = new Date().toDateString();
+        const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        
+        // Mezclar aleatoriamente pero consistente para el día
+        this.playlist = [...this.tracks];
+        for (let i = this.playlist.length - 1; i > 0; i--) {
+            const j = Math.floor((seed + i) % (i + 1));
+            [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
+        }
+        
+        console.log('🎵 Playlist diaria generada:', this.playlist.map(t => t.name));
+    }
+
+    getCurrentTrack() {
+        return this.playlist[this.currentTrackIndex];
+    }
+
+    nextTrack() {
+        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
+        return this.getCurrentTrack();
+    }
+
+    getMusicState() {
+        return {
+            currentTrack: this.getCurrentTrack(),
+            currentTrackIndex: this.currentTrackIndex,
+            isPlaying: this.isPlaying,
+            playlist: this.playlist
+        };
+    }
+}
+
+// ============================================================================
 // 🚀 INICIALIZACIÓN
 // ============================================================================
 
-// Inicializar trackers
+// Inicializar sistemas
 const sacmTracker = new SACMTracker();
 sacmTracker.init();
 
 const postsPersistence = new PostsPersistence();
 postsPersistence.init();
+
+const musicSystem = new SyncedMusicSystem();
 
 // Configuración de tipos MIME
 const mimeTypes = {
@@ -379,6 +449,13 @@ const server = http.createServer((req, res) => {
         });
         return;
     }
+
+    // 🆕 ENDPOINT PARA OBTENER ESTADO DE MÚSICA
+    if (req.url === '/music-state' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify(musicSystem.getMusicState()));
+        return;
+    }
     
     // Manejar rutas de archivos estáticos
     let filePath = req.url;
@@ -426,9 +503,7 @@ const wss = new WebSocket.Server({ server });
 // Almacenamiento en memoria
 const state = {
     posts: [],
-    activeUsers: new Set(),
-    musicPlaylist: [], // 🆕 Para música sincronizada
-    currentTrackIndex: 0
+    activeUsers: new Set()
 };
 
 // 🆕 CARGAR POSTS PERSISTENTES AL INICIAR
@@ -642,6 +717,37 @@ function handleMessage(socket, data) {
             console.log('🎵 Reproducción completada:', data.songId, 'duración:', data.duration);
             sacmTracker.trackPlay(data.songId, data.userId, data.duration);
             break;
+        // 🆕 Comandos de música sincronizada
+        case 'music_command':
+            handleMusicCommand(socket, data);
+            break;
+    }
+}
+
+// 🆕 Manejar comandos de música
+function handleMusicCommand(socket, data) {
+    switch(data.command) {
+        case 'next':
+            musicSystem.nextTrack();
+            broadcast({
+                type: 'music_update',
+                musicState: musicSystem.getMusicState()
+            });
+            break;
+        case 'play':
+            musicSystem.isPlaying = true;
+            broadcast({
+                type: 'music_update',
+                musicState: musicSystem.getMusicState()
+            });
+            break;
+        case 'pause':
+            musicSystem.isPlaying = false;
+            broadcast({
+                type: 'music_update', 
+                musicState: musicSystem.getMusicState()
+            });
+            break;
     }
 }
 
@@ -653,7 +759,8 @@ wss.on('connection', (socket, req) => {
     socket.send(JSON.stringify({
         type: 'welcome',
         message: 'Bienvenido a MESH TCSACM 🌟',
-        posts: state.posts.slice(0, 200)
+        posts: state.posts.slice(0, 200),
+        musicState: musicSystem.getMusicState() // 🆕 Incluir estado de música
     }));
 
     socket.on('message', (message) => {
@@ -708,6 +815,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor MESH ejecutándose en puerto ${PORT}`);
     console.log('🎵 Sistema de compositores ACTIVADO - Posts ilimitados para contenido musical');
     console.log('💾 Sistema de persistencia ACTIVADO - Posts importantes se guardan en Google Sheets');
+    console.log('🎵 Música sincronizada ACTIVADA - Playlist aleatoria diaria para todos');
     console.log('📊 Backup automático cada 3 minutos');
     console.log('🔧 Características:');
     console.log('   - Posts generales: 1 por día, duran 24h');
@@ -715,6 +823,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('   - Colaboraciones: 30 días');
     console.log('   - Proyectos: 60 días');
     console.log('   - Eventos: Hasta la fecha del evento');
+    console.log('   - Música: Playlist aleatoria sincronizada');
 });
 
 process.on('uncaughtException', (error) => {
