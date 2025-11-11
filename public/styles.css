@@ -432,46 +432,61 @@ body {
     100% { transform: scale(1); }
 }
 
-/* 🎵 REPRODUCTOR DE AUDIO INTEGRADO */
+/* 🎵 REPRODUCTOR DE AUDIO INTEGRADO - MEJORADO PARA MÓVILES */
 .music-player {
     position: fixed;
     bottom: 20px;
     left: 20px;
-    background: rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.25);
+    backdrop-filter: blur(15px);
     border-radius: 20px;
-    padding: 10px 15px;
+    padding: 12px 16px;
     color: white;
     z-index: 1000;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 2px solid rgba(255, 255, 255, 0.4);
     font-family: Arial, sans-serif;
-    max-width: 160px;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+    max-width: 180px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
     display: flex;
     align-items: center;
     gap: 12px;
+    transition: all 0.3s ease;
+}
+
+/* 🆕 ESTADO ACTIVO DEL REPRODUCTOR */
+.music-player.active {
+    background: rgba(255, 255, 255, 0.35);
+    border-color: rgba(255, 255, 255, 0.6);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
 }
 
 .music-player button {
-    background: rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
-    font-size: 1.1em;
+    font-size: 1.2em;
     cursor: pointer;
     padding: 10px;
     border-radius: 50%;
     transition: all 0.3s ease;
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .music-player button:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.3);
     transform: scale(1.1);
+}
+
+.music-player button:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.4) !important;
 }
 
 .music-player button:disabled {
@@ -483,27 +498,29 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 6px;
+    min-width: 0;
 }
 
 #nowPlaying {
-    font-size: 0.9em;
-    font-weight: 500;
+    font-size: 0.85em;
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
 }
 
 .player-controls {
     display: flex;
-    gap: 5px;
+    gap: 6px;
     justify-content: center;
 }
 
 .player-controls button {
-    width: 35px;
-    height: 35px;
-    font-size: 0.9em;
+    width: 38px;
+    height: 38px;
+    font-size: 0.95em;
 }
 
 .loading-spinner {
@@ -517,23 +534,37 @@ body {
 }
 
 .night-mode .music-player {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px solid rgba(255, 255, 255, 0.25);
 }
 
-/* Estado de reproducción */
-.music-player.playing {
+.night-mode .music-player.active {
     background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.4);
 }
 
-/* Responsive */
-@media (max-width: 240px) {
+/* 🆕 INDICADOR DE REPRODUCCIÓN */
+.music-player.playing .music-toggle-btn {
+    background: rgba(76, 175, 80, 0.3);
+    border-color: rgba(76, 175, 80, 0.6);
+    animation: pulseGlow 2s infinite;
+}
+
+@keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
+    50% { box-shadow: 0 0 15px rgba(76, 175, 80, 0.6); }
+}
+
+/* Responsive mejorado para móviles */
+@media (max-width: 768px) {
     .music-player {
-        bottom: 10px;
+        bottom: 15px;
         left: 10px;
         right: 10px;
         max-width: none;
-        padding: 12px;
+        padding: 15px 18px;
+        background: rgba(255, 255, 255, 0.3);
+        border: 2px solid rgba(255, 255, 255, 0.5);
     }
     
     .player-info {
@@ -541,8 +572,34 @@ body {
     }
     
     #nowPlaying {
-        font-size: 0.8em;
+        font-size: 0.9em;
+        font-weight: 600;
     }
+    
+    .music-player button {
+        width: 46px !important;
+        height: 46px !important;
+        font-size: 1.3em;
+    }
+    
+    .player-controls button {
+        width: 42px !important;
+        height: 42px !important;
+        font-size: 1.1em;
+    }
+    
+    .player-controls {
+        gap: 8px;
+    }
+}
+
+/* 🆕 BOTONES MÁS GRANDES Y ACCESIBLES PARA MÓVILES */
+.music-toggle-btn, .control-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 /* 🎵 PANEL DE COMPOSITORES MEJORADO */
@@ -822,71 +879,35 @@ body.composer-mode .post-cell {
     font-weight: bold;
 }
 
-/* 🆕 ESTILOS MEJORADOS PARA MÓVILES */
-@media (max-width: 768px) {
-    .music-player {
-        bottom: 15px;
-        left: 10px;
-        right: 10px;
-        max-width: none;
-        padding: 12px 15px;
-        font-size: 14px;
-        background: rgba(255, 255, 255, 0.25);
-        backdrop-filter: blur(15px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .music-player button {
-        width: 44px !important;  /* Tamaño mínimo para touch */
-        height: 44px !important;
-        font-size: 1.3em;
-        padding: 8px;
-    }
-
-    .player-info {
-        min-width: 0;
-        flex-grow: 1;
-    }
-
-    #nowPlaying {
-        font-size: 0.85em;
-        font-weight: 500;
-    }
-
-    .player-controls {
-        gap: 8px;
-    }
-
-    /* 🆕 BOTONES MÁS GRANDES PARA MÓVILES */
-    .music-toggle-btn, .control-btn {
-        min-width: 44px;
-        min-height: 44px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-}
-
-/* 🆕 MENSAJE DE AYUDA PARA MÓVILES */
+/* 🆕 MENSAJE DE AYUDA PARA MÓVILES - MEJORADO */
 .mobile-help {
     position: absolute;
-    top: -40px;
+    top: -45px;
     left: 0;
     right: 0;
-    background: rgba(255, 107, 107, 0.9);
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
     color: white;
-    padding: 8px 12px;
-    border-radius: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
     font-size: 0.8em;
     text-align: center;
     animation: pulseHelp 2s infinite;
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    font-weight: 600;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
 }
 
 @keyframes pulseHelp {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.05); }
+    0%, 100% { 
+        transform: scale(1) translateY(0); 
+        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+    }
+    50% { 
+        transform: scale(1.05) translateY(-2px); 
+        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.6);
+    }
 }
 
 /* 🆕 MEJORAS TÁCTILES GENERALES */
@@ -899,13 +920,13 @@ body.composer-mode .post-cell {
 /* 🆕 ESTADOS DE BOTONES EN MÓVILES */
 .music-player button:active {
     transform: scale(0.95);
-    background: rgba(255, 255, 255, 0.3) !important;
+    background: rgba(255, 255, 255, 0.4) !important;
 }
 
 /* 🆕 MEJORAS PARA iOS SAFARI */
 @supports (-webkit-touch-callout: none) {
     .music-player {
-        padding: 15px;
+        padding: 16px 18px;
     }
     
     .music-player button {
@@ -917,16 +938,63 @@ body.composer-mode .post-cell {
 @media (max-width: 480px) {
     .music-player {
         bottom: 10px;
-        left: 5px;
-        right: 5px;
-        padding: 10px 12px;
+        left: 8px;
+        right: 8px;
+        padding: 14px 16px;
     }
     
     #nowPlaying {
-        font-size: 0.8em;
+        font-size: 0.85em;
     }
     
     .player-controls {
-        gap: 5px;
+        gap: 6px;
     }
+    
+    .music-player button {
+        width: 44px !important;
+        height: 44px !important;
+    }
+}
+
+/* 🆕 ESTILOS ESPECÍFICOS PARA BRAVE MOBILE */
+@media (max-width: 768px) and (hover: none) {
+    .music-player {
+        background: rgba(255, 255, 255, 0.35);
+        border: 2px solid rgba(255, 255, 255, 0.6);
+    }
+    
+    .music-player button {
+        background: rgba(255, 255, 255, 0.25);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+    }
+    
+    .music-player button:active {
+        background: rgba(255, 255, 255, 0.4) !important;
+        border-color: rgba(255, 255, 255, 0.6);
+    }
+}
+
+/* 🆕 MEJORAS DE ACCESIBILIDAD */
+@media (prefers-reduced-motion: reduce) {
+    .post-cell, .music-player, button {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* 🆕 ESTADO DE CARGA DEL REPRODUCTOR */
+.music-player.loading .music-toggle-btn {
+    animation: spin 1s linear infinite;
+}
+
+/* 🆕 INDICADOR DE ERROR */
+.music-player.error #nowPlaying {
+    color: #ff6b6b;
+    animation: errorPulse 1s ease-in-out;
+}
+
+@keyframes errorPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }

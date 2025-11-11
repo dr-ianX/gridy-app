@@ -22,11 +22,11 @@ class GridyClient {
         this.createComposerFeatures();
         this.createDynamicBackground();
         // 🎯 INICIALIZAR MUSIC PLAYER CON RETRASO PARA MÓVILES
-    setTimeout(() => {
-        this.musicPlayer.init();
-        console.log('🎵 Music Player inicializado para móviles');
-    }, 1500);
-}
+        setTimeout(() => {
+            this.musicPlayer.init();
+            console.log('🎵 Music Player inicializado para móviles');
+        }, 1500);
+    }
     
     loadUser() {
         const savedNickname = localStorage.getItem('gridy_nickname');
@@ -339,6 +339,18 @@ class GridyClient {
             // 🆕 Post removido (resuelto)
             case 'post_removed':
                 this.posts = this.posts.filter(p => p.id !== data.postId);
+                this.renderGrid();
+                break;
+
+            // 🆕 Posts cargados desde persistencia
+            case 'posts_loaded':
+                console.log('📥 Posts persistentes cargados:', data.posts.length);
+                // Agregar posts persistentes al inicio
+                data.posts.forEach(post => {
+                    if (!this.posts.find(p => p.id === post.id)) {
+                        this.posts.unshift(post);
+                    }
+                });
                 this.renderGrid();
                 break;
         }
@@ -781,7 +793,7 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO COMPATIBLE CON MÓVILES
+// 🎵 REPRODUCTOR DE AUDIO COMPATIBLE CON MÓVILES - MEJORADO PARA BRAVE
 class MusicPlayer {
     constructor(gridyClient) {
         this.gridyClient = gridyClient;
@@ -794,6 +806,7 @@ class MusicPlayer {
         this.playlist = [];
         this.userInteracted = false; // 🆕 Para controlar interacción del usuario
         this.audioLoaded = false; // 🆕 Para saber si el audio está listo
+        this.audioContext = null; // 🆕 Para navegadores que requieren AudioContext
         
         // 🎯 Configurar audio para máxima compatibilidad
         this.audio.preload = 'auto';
@@ -867,7 +880,7 @@ class MusicPlayer {
                         <button id="nextTrack" class="control-btn">⏭️</button>
                     </div>
                 </div>
-                <!-- 🆕 MENSAJE PARA MÓVILES -->
+                <!-- 🆕 MENSAJE MEJORADO PARA MÓVILES -->
                 <div id="mobileHelp" class="mobile-help" style="display: none;">
                     👆 Toca para activar la música
                 </div>
@@ -900,6 +913,11 @@ class MusicPlayer {
                 
                 // 🎯 En móviles, precargar el audio en la primera interacción
                 this.preloadCurrentTrack();
+                
+                // 🆕 INTENTAR REPRODUCIR AUTOMÁTICAMENTE SI ESTÁ EN MÓVIL Y EL USUARIO INTERACTUÓ
+                if (isMobile) {
+                    this.playCurrentTrack();
+                }
             }
         };
 
@@ -1059,7 +1077,8 @@ class MusicPlayer {
         }
     }
 
-    playCurrentTrack() {
+    // 🆕 MÉTODO MEJORADO PARA REPRODUCIR
+    async playCurrentTrack() {
         if (this.playlist.length === 0) {
             console.log('❌ No hay playlist disponible');
             this.showError('No hay música disponible');
@@ -1086,34 +1105,48 @@ class MusicPlayer {
         this.audio.src = track.file;
         
         // 🎯 ESTRATEGIA MEJORADA PARA MÓVILES
-        const playAudio = () => {
-            const playPromise = this.audio.play();
-            
-            if (playPromise !== undefined) {
-                playPromise.then(() => {
-                    this.isPlaying = true;
-                    document.getElementById('musicToggle').textContent = '⏸️';
-                    this.updatePlayerUI();
-                    console.log('✅ Reproducción iniciada correctamente');
-                }).catch(error => {
-                    console.error('❌ Error al reproducir:', error);
-                    
-                    // 🎯 MANEJO ESPECÍFICO DE ERRORES EN MÓVILES
-                    if (this.isMobileDevice()) {
+        const playAudio = async () => {
+            try {
+                // 🆕 INTENTAR REPRODUCIR CON AudioContext SI ES NECESARIO
+                if (this.audioContext && this.audioContext.state === 'suspended') {
+                    await this.audioContext.resume();
+                }
+
+                await this.audio.play();
+                this.isPlaying = true;
+                document.getElementById('musicToggle').textContent = '⏸️';
+                this.updatePlayerUI();
+                console.log('✅ Reproducción iniciada correctamente');
+            } catch (error) {
+                console.error('❌ Error al reproducir:', error);
+                
+                // 🆕 INTENTAR CREAR AudioContext SI FALLA
+                if (error.name === 'NotAllowedError') {
+                    console.log('🔧 Intentando con AudioContext...');
+                    try {
+                        this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        await this.audioContext.resume();
+                        
+                        // Reconectar el audio al contexto
+                        const source = this.audioContext.createMediaElementSource(this.audio);
+                        source.connect(this.audioContext.destination);
+                        
+                        // Intentar reproducir de nuevo
+                        await this.audio.play();
+                        this.isPlaying = true;
+                        document.getElementById('musicToggle').textContent = '⏸️';
+                        this.updatePlayerUI();
+                        console.log('✅ Reproducción iniciada con AudioContext');
+                    } catch (secondError) {
+                        console.error('❌ Error con AudioContext:', secondError);
                         this.showError('Toca para reproducir 🔊');
-                        // 🎯 Intentar de nuevo con un pequeño retraso
-                        setTimeout(() => {
-                            this.audio.play().catch(e => {
-                                console.error('❌ Segundo intento fallido:', e);
-                            });
-                        }, 100);
-                    } else {
-                        this.showError('Haz clic para reproducir');
                     }
-                    
-                    this.isPlaying = false;
-                    document.getElementById('musicToggle').textContent = '🎵';
-                });
+                } else {
+                    this.showError('Haz clic para reproducir');
+                }
+                
+                this.isPlaying = false;
+                document.getElementById('musicToggle').textContent = '🎵';
             }
         };
 

@@ -25,7 +25,7 @@ const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 // ============================================================================
-// 🆕 CLASE PARA PERSISTENCIA DE POSTS IMPORTANTES
+// 🆕 CLASE MEJORADA PARA PERSISTENCIA DE POSTS IMPORTANTES
 // ============================================================================
 class PostsPersistence {
     constructor() {
@@ -33,6 +33,8 @@ class PostsPersistence {
         this.sheet = null;
         this.initialized = false;
         this.lastBackup = null;
+        this.retryCount = 0;
+        this.maxRetries = 3;
     }
 
     async init() {
@@ -53,142 +55,180 @@ class PostsPersistence {
 
             await this.doc.loadInfo();
             console.log(`📊 Google Sheet cargado: ${this.doc.title}`);
-            this.sheet = this.doc.sheetsByIndex[0];
-            console.log(`📄 Usando hoja: ${this.sheet.title}`);
-            this.initialized = true;
             
+            // 🆕 INTENTAR USAR HOJA EXISTENTE O CREAR NUEVA
+            try {
+                this.sheet = this.doc.sheetsByIndex[0];
+                console.log(`📄 Usando hoja existente: ${this.sheet.title}`);
+            } catch (error) {
+                console.log('📄 Creando nueva hoja...');
+                this.sheet = await this.doc.addSheet({
+                    title: 'Posts Importantes',
+                    headerValues: ['id', 'user', 'content', 'postType', 'interactions', 'timestamp', 'status', 'expiresAt']
+                });
+            }
+            
+            this.initialized = true;
             console.log('✅ Google Sheets conectado para persistencia de posts');
         } catch (error) {
             console.error('❌ Error inicializando Google Sheets para posts:', error.message);
+            this.retryCount++;
+            
+            // 🆕 REINTENTAR AUTOMÁTICAMENTE
+            if (this.retryCount <= this.maxRetries) {
+                console.log(`🔄 Reintentando en 5 segundos... (${this.retryCount}/${this.maxRetries})`);
+                setTimeout(() => this.init(), 5000);
+            }
         }
     }
 
-    // 🆕 IDENTIFICAR POSTS IMPORTANTES
+    // 🆕 IDENTIFICAR POSTS IMPORTANTES MEJORADO
     isImportantPost(post) {
-        const isImportant = post.content.includes('🤝 COLABORACIÓN:') ||
-               post.content.includes('🔍 BUSCO:') || 
-               post.content.includes('💿 PROYECTO:') ||
-               post.content.includes('📅 EVENTO:');
+        const importantKeywords = [
+            '🤝 COLABORACIÓN:', '🔍 BUSCO:', '💿 PROYECTO:', '📅 EVENTO:',
+            '🎵 LETRAS:', '🎸 ACORDES:'
+        ];
+        
+        const isImportant = importantKeywords.some(keyword => 
+            post.content.includes(keyword)
+        );
         
         console.log(`🔍 Verificando post: "${post.content.substring(0, 50)}..." -> ${isImportant ? 'IMPORTANTE' : 'normal'}`);
         return isImportant;
     }
 
-    // 🆕 GUARDAR POSTS IMPORTANTES - CON DEBUG EXTENDIDO
+    // 🆕 GUARDAR POSTS IMPORTANTES - CON REINTENTOS
     async saveImportantPosts(posts) {
         if (!this.initialized || !this.sheet) {
             console.log('⚠️  Persistencia no inicializada - omitiendo backup');
-            return;
+            return false;
         }
 
-        try {
-            console.log('🔍 DEBUG: Analizando', posts.length, 'posts para persistencia...');
-            
-            const importantPosts = posts.filter(post => {
-                const isImportant = this.isImportantPost(post);
-                console.log(`🔍 DEBUG Post "${post.content.substring(0, 30)}...": ${isImportant ? 'IMPORTANTE' : 'NO importante'}`);
-                return isImportant;
-            });
-            
-            console.log(`💾 Encontrados ${importantPosts.length} posts importantes de ${posts.length} totales`);
-
-            if (importantPosts.length === 0) {
-                console.log('ℹ️  No hay posts importantes para guardar');
-                return;
-            }
-
-            console.log(`💾 Iniciando backup de ${importantPosts.length} posts importantes...`);
-
-            // Obtener filas existentes
-            const existingRows = await this.sheet.getRows();
-            console.log(`📊 DEBUG: ${existingRows.length} filas existentes en Google Sheets`);
-            
-            const existingIds = new Set(existingRows.map(row => row.id));
-            console.log('🔍 DEBUG IDs existentes:', Array.from(existingIds));
-
-            // Preparar datos para guardar
-            const postsToSave = importantPosts.filter(post => {
-                const isNew = !existingIds.has(post.id);
-                console.log(`🔍 DEBUG Post ID ${post.id}: ${isNew ? 'NUEVO' : 'YA EXISTE'}`);
-                return isNew;
-            });
-
-            console.log(`🔍 DEBUG: ${postsToSave.length} posts nuevos para guardar`);
-
-            if (postsToSave.length === 0) {
-                console.log('ℹ️  No hay posts nuevos para guardar');
-                return;
-            }
-
-            // Guardar nuevos posts
-            for (const post of postsToSave) {
-                console.log(`💾 Guardando post: ${post.id} - ${post.user}`);
-                const rowData = {
-                    id: post.id,
-                    user: post.user,
-                    content: post.content,
-                    postType: post.postType || 'composer',
-                    interactions: post.interactions || 0,
-                    timestamp: new Date(post.timestamp).toISOString(),
-                    status: 'active',
-                    expiresAt: this.calculateExpiration(post)
-                };
-                console.log('📝 DEBUG Datos a guardar:', rowData);
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                console.log(`🔍 [Intento ${attempt}/3] Analizando ${posts.length} posts para persistencia...`);
                 
-                await this.sheet.addRow(rowData);
-                console.log(`✅ Guardado post: ${post.id} - ${post.user}`);
+                const importantPosts = posts.filter(post => {
+                    const isImportant = this.isImportantPost(post);
+                    console.log(`🔍 DEBUG Post "${post.content.substring(0, 30)}...": ${isImportant ? 'IMPORTANTE' : 'NO importante'}`);
+                    return isImportant;
+                });
+                
+                console.log(`💾 Encontrados ${importantPosts.length} posts importantes de ${posts.length} totales`);
+
+                if (importantPosts.length === 0) {
+                    console.log('ℹ️  No hay posts importantes para guardar');
+                    return true;
+                }
+
+                console.log(`💾 Iniciando backup de ${importantPosts.length} posts importantes...`);
+
+                // Obtener filas existentes
+                const existingRows = await this.sheet.getRows();
+                console.log(`📊 DEBUG: ${existingRows.length} filas existentes en Google Sheets`);
+                
+                const existingIds = new Set(existingRows.map(row => row.id));
+                console.log('🔍 DEBUG IDs existentes:', Array.from(existingIds));
+
+                // Preparar datos para guardar
+                const postsToSave = importantPosts.filter(post => {
+                    const isNew = !existingIds.has(post.id);
+                    console.log(`🔍 DEBUG Post ID ${post.id}: ${isNew ? 'NUEVO' : 'YA EXISTE'}`);
+                    return isNew;
+                });
+
+                console.log(`🔍 DEBUG: ${postsToSave.length} posts nuevos para guardar`);
+
+                if (postsToSave.length === 0) {
+                    console.log('ℹ️  No hay posts nuevos para guardar');
+                    return true;
+                }
+
+                // Guardar nuevos posts
+                for (const post of postsToSave) {
+                    console.log(`💾 Guardando post: ${post.id} - ${post.user}`);
+                    const rowData = {
+                        id: post.id,
+                        user: post.user,
+                        content: post.content,
+                        postType: post.postType || 'composer',
+                        interactions: post.interactions || 0,
+                        timestamp: new Date(post.timestamp).toISOString(),
+                        status: 'active',
+                        expiresAt: this.calculateExpiration(post)
+                    };
+                    
+                    await this.sheet.addRow(rowData);
+                    console.log(`✅ Guardado post: ${post.id} - ${post.user}`);
+                }
+
+                this.lastBackup = new Date();
+                console.log(`🎉 Backup completado: ${postsToSave.length} posts guardados`);
+                return true;
+
+            } catch (error) {
+                console.error(`❌ Error en backup (intento ${attempt}/3):`, error.message);
+                if (attempt < 3) {
+                    console.log('🔄 Reintentando en 2 segundos...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                    console.error('💥 Backup fallado después de 3 intentos');
+                    return false;
+                }
             }
-
-            this.lastBackup = new Date();
-            console.log(`🎉 Backup completado: ${postsToSave.length} posts guardados`);
-
-        } catch (error) {
-            console.error('❌ Error en backup de posts:', error.message);
-            console.error('🔍 DEBUG Error completo:', error);
         }
     }
 
-    // 🆕 CARGAR POSTS AL INICIAR EL SERVIDOR
+    // 🆕 CARGAR POSTS AL INICIAR EL SERVIDOR - MEJORADO
     async loadPosts() {
         if (!this.initialized || !this.sheet) {
             console.log('⚠️  Persistencia no inicializada - cargando posts vacíos');
             return [];
         }
 
-        try {
-            console.log('🔍 Cargando posts persistentes desde Google Sheets...');
-            const rows = await this.sheet.getRows();
-            console.log(`📊 ${rows.length} filas encontradas en Google Sheets`);
-            
-            const now = new Date();
-            
-            const posts = rows
-                .filter(row => {
-                    // Filtrar posts expirados
-                    const expiresAt = new Date(row.expiresAt);
-                    const isActive = expiresAt > now && row.status === 'active';
-                    if (!isActive) {
-                        console.log(`🔍 Filtrando post expirado: ${row.id} - ${row.user}`);
-                    }
-                    return isActive;
-                })
-                .map(row => ({
-                    id: row.id,
-                    user: row.user,
-                    content: row.content,
-                    postType: row.postType || 'composer',
-                    interactions: parseInt(row.interactions) || 0,
-                    timestamp: new Date(row.timestamp).getTime(),
-                    comments: [],
-                    status: row.status || 'active',
-                    isPersistent: true // 🆕 Marcar como post persistente
-                }));
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                console.log(`🔍 [Intento ${attempt}/3] Cargando posts persistentes desde Google Sheets...`);
+                const rows = await this.sheet.getRows();
+                console.log(`📊 ${rows.length} filas encontradas en Google Sheets`);
+                
+                const now = new Date();
+                
+                const posts = rows
+                    .filter(row => {
+                        // Filtrar posts expirados
+                        if (!row.expiresAt) return true;
+                        const expiresAt = new Date(row.expiresAt);
+                        const isActive = expiresAt > now && row.status === 'active';
+                        if (!isActive) {
+                            console.log(`🔍 Filtrando post expirado: ${row.id} - ${row.user}`);
+                        }
+                        return isActive;
+                    })
+                    .map(row => ({
+                        id: row.id,
+                        user: row.user,
+                        content: row.content,
+                        postType: row.postType || 'composer',
+                        interactions: parseInt(row.interactions) || 0,
+                        timestamp: new Date(row.timestamp).getTime(),
+                        comments: [],
+                        status: row.status || 'active',
+                        isPersistent: true // 🆕 Marcar como post persistente
+                    }));
 
-            console.log(`📂 Cargados ${posts.length} posts persistentes desde Google Sheets`);
-            return posts;
-        } catch (error) {
-            console.error('❌ Error cargando posts:', error);
-            return [];
+                console.log(`📂 Cargados ${posts.length} posts persistentes desde Google Sheets`);
+                return posts;
+            } catch (error) {
+                console.error(`❌ Error cargando posts (intento ${attempt}/3):`, error);
+                if (attempt < 3) {
+                    console.log('🔄 Reintentando en 2 segundos...');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                } else {
+                    console.error('💥 Carga fallada después de 3 intentos');
+                    return [];
+                }
+            }
         }
     }
 
@@ -219,24 +259,29 @@ class PostsPersistence {
         return null;
     }
 
-    // 🆕 MARCAR POST COMO RESUELTO
+    // 🆕 MARCAR POST COMO RESUELTO MEJORADO
     async markAsResolved(postId) {
         if (!this.initialized || !this.sheet) return false;
 
-        try {
-            const rows = await this.sheet.getRows();
-            const row = rows.find(r => r.id === postId);
-            if (row) {
-                row.status = 'resolved';
-                await row.save();
-                console.log(`✅ Post ${postId} marcado como resuelto`);
-                return true;
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const rows = await this.sheet.getRows();
+                const row = rows.find(r => r.id === postId);
+                if (row) {
+                    row.status = 'resolved';
+                    await row.save();
+                    console.log(`✅ Post ${postId} marcado como resuelto`);
+                    return true;
+                }
+                return false;
+            } catch (error) {
+                console.error(`❌ Error marcando post como resuelto (intento ${attempt}/3):`, error);
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
             }
-            return false;
-        } catch (error) {
-            console.error('❌ Error marcando post como resuelto:', error);
-            return false;
         }
+        return false;
     }
 }
 
@@ -528,12 +573,27 @@ const state = {
     activeUsers: new Set()
 };
 
-// 🆕 CARGAR POSTS PERSISTENTES AL INICIAR
+// 🆕 CARGAR POSTS PERSISTENTES AL INICIAR - MEJORADO
 async function initializeServer() {
     try {
+        console.log('🔄 Inicializando servidor y cargando posts persistentes...');
         const persistentPosts = await postsPersistence.loadPosts();
-        state.posts = [...persistentPosts, ...state.posts];
-        console.log(`🎯 Servidor inicializado con ${state.posts.length} posts (${persistentPosts.length} persistentes)`);
+        
+        // 🆕 COMBINAR POSTS EXISTENTES CON PERSISTENTES (EVITAR DUPLICADOS)
+        const existingIds = new Set(state.posts.map(p => p.id));
+        const newPersistentPosts = persistentPosts.filter(p => !existingIds.has(p.id));
+        
+        state.posts = [...newPersistentPosts, ...state.posts];
+        console.log(`🎯 Servidor inicializado con ${state.posts.length} posts (${newPersistentPosts.length} persistentes cargados)`);
+        
+        // 🆕 BROADCAST DE POSTS CARGADOS A TODOS LOS CLIENTES CONECTADOS
+        if (newPersistentPosts.length > 0) {
+            console.log('📤 Enviando posts persistentes a clientes conectados...');
+            broadcast({
+                type: 'posts_loaded',
+                posts: newPersistentPosts
+            });
+        }
     } catch (error) {
         console.error('❌ Error inicializando servidor:', error);
     }
@@ -541,40 +601,21 @@ async function initializeServer() {
 
 initializeServer();
 
-// 🆕 BACKUP AUTOMÁTICO CADA 3 MINUTOS
-setInterval(() => {
+// 🆕 BACKUP AUTOMÁTICO CADA 3 MINUTOS - MEJORADO
+setInterval(async () => {
     if (postsPersistence.initialized && state.posts.length > 0) {
         console.log('🔄 Ejecutando backup automático...');
-        postsPersistence.saveImportantPosts(state.posts);
+        const success = await postsPersistence.saveImportantPosts(state.posts);
+        if (success) {
+            console.log('✅ Backup automático completado');
+        } else {
+            console.log('❌ Backup automático fallado');
+        }
     }
 }, 3 * 60 * 1000); // 3 minutos
 
-// Limpiar posts viejos (solo los no importantes)
-function cleanupOldPosts() {
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
-    
-    const initialCount = state.posts.length;
-    
-    state.posts = state.posts.filter(post => {
-        // 🆕 Mantener posts importantes y persistentes
-        if (post.isPersistent || postsPersistence.isImportantPost(post)) {
-            return true;
-        }
-        
-        // Posts normales: eliminar después de 24 horas
-        return (now - post.timestamp) < oneDay;
-    });
-    
-    if (initialCount !== state.posts.length) {
-        console.log(`🧹 Limpieza: ${initialCount} → ${state.posts.length} posts`);
-    }
-}
-
-setInterval(cleanupOldPosts, 60 * 60 * 1000); // Cada hora
-
-// 🎵 MEJORADO: Manejar nueva publicación con sistema de tipos
-function handleNewPost(socket, data) {
+// 🆕 GUARDAR POSTS IMPORTANTES INMEDIATAMENTE AL CREARSE
+async function handleNewPostWithPersistence(socket, data) {
     // Validar datos
     if (!data.user || !data.content) {
         socket.send(JSON.stringify({
@@ -637,12 +678,19 @@ function handleNewPost(socket, data) {
     // Agregar a la lista de posts
     state.posts.unshift(newPost);
     
-    // 🆕 GUARDAR INMEDIATAMENTE SI ES IMPORTANTE
+    // 🆕 GUARDAR INMEDIATAMENTE SI ES IMPORTANTE - CON MANEJO DE ERRORES
     if (postsPersistence.isImportantPost(newPost)) {
         console.log('🚨 POST IMPORTANTE DETECTADO - Guardando inmediatamente...');
-        setTimeout(() => {
-            postsPersistence.saveImportantPosts([newPost]);
-        }, 1000);
+        try {
+            const saveSuccess = await postsPersistence.saveImportantPosts([newPost]);
+            if (saveSuccess) {
+                console.log('✅ Post importante guardado exitosamente');
+            } else {
+                console.log('⚠️ Post importante no se pudo guardar, pero se mantiene en memoria');
+            }
+        } catch (error) {
+            console.error('❌ Error guardando post importante:', error);
+        }
     }
     
     // Limitar a 200 posts máximo (solo posts en memoria)
@@ -655,6 +703,35 @@ function handleNewPost(socket, data) {
         type: 'new_post',
         post: newPost
     });
+}
+
+// Limpiar posts viejos (solo los no importantes)
+function cleanupOldPosts() {
+    const now = Date.now();
+    const oneDay = 24 * 60 * 60 * 1000;
+    
+    const initialCount = state.posts.length;
+    
+    state.posts = state.posts.filter(post => {
+        // 🆕 Mantener posts importantes y persistentes
+        if (post.isPersistent || postsPersistence.isImportantPost(post)) {
+            return true;
+        }
+        
+        // Posts normales: eliminar después de 24 horas
+        return (now - post.timestamp) < oneDay;
+    });
+    
+    if (initialCount !== state.posts.length) {
+        console.log(`🧹 Limpieza: ${initialCount} → ${state.posts.length} posts`);
+    }
+}
+
+setInterval(cleanupOldPosts, 60 * 60 * 1000); // Cada hora
+
+// 🎵 MEJORADO: Manejar nueva publicación con sistema de tipos
+async function handleNewPost(socket, data) {
+    await handleNewPostWithPersistence(socket, data);
 }
 
 function handleNewComment(socket, data) {
@@ -722,10 +799,10 @@ function broadcast(message) {
     console.log(`📤 Broadcast enviado a ${sentCount} clientes:`, message.type);
 }
 
-function handleMessage(socket, data) {
+async function handleMessage(socket, data) {
     switch(data.type) {
         case 'new_post':
-            handleNewPost(socket, data);
+            await handleNewPost(socket, data);
             break;
         case 'new_comment':
             handleNewComment(socket, data);
@@ -756,10 +833,10 @@ wss.on('connection', (socket, req) => {
         dailyPlaylist: dailyPlaylist.getDailyPlaylist() // 🆕 Solo enviar playlist, NO control de reproducción
     }));
 
-    socket.on('message', (message) => {
+    socket.on('message', async (message) => {
         try {
             const data = JSON.parse(message);
-            handleMessage(socket, data);
+            await handleMessage(socket, data);
         } catch (error) {
             console.error('❌ Error procesando mensaje:', error);
             socket.send(JSON.stringify({
@@ -779,12 +856,12 @@ wss.on('connection', (socket, req) => {
 });
 
 // Manejar cierre graceful del servidor
-process.on('SIGINT', () => {
+process.on('SIGINT', async () => {
     console.log('🛑 Cerrando servidor...');
     // 🆕 HACER BACKUP FINAL ANTES DE CERRAR
     if (postsPersistence.initialized) {
         console.log('💾 Realizando backup final...');
-        postsPersistence.saveImportantPosts(state.posts);
+        await postsPersistence.saveImportantPosts(state.posts);
     }
     wss.close(() => {
         console.log('✅ WebSocket server cerrado');
@@ -811,6 +888,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('💾 Sistema de persistencia ACTIVADO - Posts importantes se guardan en Google Sheets');
     console.log('🎵 Playlist diaria ACTIVADA - Lista aleatoria compartida, control individual');
     console.log('📊 Backup automático cada 3 minutos');
+    console.log('🔄 Sistema de reintentos ACTIVADO para Google Sheets');
     console.log('🔧 Características:');
     console.log('   - Posts generales: 1 por día, duran 24h');
     console.log('   - Posts importantes: Persisten hasta resolución');
