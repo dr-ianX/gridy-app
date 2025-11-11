@@ -130,11 +130,11 @@ body {
     flex-grow: 4;
 }
 
-/* Botón flotante para publicar */
+/* Botón flotante para publicar - MEJORADO POSICIÓN */
 .floating-publish-btn {
     position: fixed;
-    bottom: 30px;
-    right: 30px;
+    bottom: 90px; /* 🆕 MÁS ARRIBA PARA NO SUPERPONERSE */
+    right: 25px;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -145,7 +145,7 @@ body {
     cursor: pointer;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
     transition: all 0.3s ease;
-    z-index: 999;
+    z-index: 1000; /* 🆕 MÁS ALTO QUE EL REPRODUCTOR */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -330,11 +330,11 @@ body {
     }
     
     .floating-publish-btn {
-        bottom: 20px;
+        bottom: 90px; /* 🆕 CONSISTENTE EN MÓVIL */
         right: 20px;
-        width: 50px;
-        height: 50px;
-        font-size: 24px;
+        width: 55px;
+        height: 55px;
+        font-size: 26px;
     }
 }
 
@@ -432,51 +432,58 @@ body {
     100% { transform: scale(1); }
 }
 
-/* 🎵 REPRODUCTOR DE AUDIO INTEGRADO - MEJORADO PARA MÓVILES */
+/* 🎵 REPRODUCTOR DE AUDIO - REDISEÑADO COMPLETAMENTE */
 .music-player {
     position: fixed;
     bottom: 20px;
     left: 20px;
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(15px);
-    border-radius: 20px;
-    padding: 12px 16px;
+    border-radius: 25px;
+    padding: 12px 18px;
     color: white;
-    z-index: 1000;
-    border: 2px solid rgba(255, 255, 255, 0.4);
+    z-index: 999; /* 🆕 DEBAJO DEL BOTÓN + */
+    border: 2px solid rgba(255, 255, 255, 0.3);
     font-family: Arial, sans-serif;
-    max-width: 180px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 280px; /* 🆕 MÁS ANCHO EN DESKTOP */
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
     gap: 12px;
     transition: all 0.3s ease;
 }
 
-/* 🆕 ESTADO ACTIVO DEL REPRODUCTOR */
-.music-player.active {
-    background: rgba(255, 255, 255, 0.35);
-    border-color: rgba(255, 255, 255, 0.6);
-    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
+/* 🆕 VERSIÓN MÓVIL COMPACTA */
+@media (max-width: 768px) {
+    .music-player {
+        bottom: 20px;
+        left: 15px;
+        right: 15px;
+        max-width: none;
+        padding: 10px 15px;
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+    }
 }
 
 .music-player button {
     background: rgba(255, 255, 255, 0.2);
     border: none;
     color: white;
-    font-size: 1.2em;
+    font-size: 1.1em;
     cursor: pointer;
     padding: 10px;
     border-radius: 50%;
     transition: all 0.3s ease;
-    width: 42px;
-    height: 42px;
+    width: 40px;
+    height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
+    flex-shrink: 0;
 }
 
 .music-player button:hover:not(:disabled) {
@@ -498,8 +505,9 @@ body {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 4px;
     min-width: 0;
+    overflow: hidden;
 }
 
 #nowPlaying {
@@ -518,9 +526,9 @@ body {
 }
 
 .player-controls button {
-    width: 38px;
-    height: 38px;
-    font-size: 0.95em;
+    width: 36px;
+    height: 36px;
+    font-size: 0.9em;
 }
 
 .loading-spinner {
@@ -534,37 +542,24 @@ body {
 }
 
 .night-mode .music-player {
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid rgba(255, 255, 255, 0.25);
-}
-
-.night-mode .music-player.active {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 /* 🆕 INDICADOR DE REPRODUCCIÓN */
 .music-player.playing .music-toggle-btn {
     background: rgba(76, 175, 80, 0.3);
     border-color: rgba(76, 175, 80, 0.6);
-    animation: pulseGlow 2s infinite;
-}
-
-@keyframes pulseGlow {
-    0%, 100% { box-shadow: 0 0 5px rgba(76, 175, 80, 0.3); }
-    50% { box-shadow: 0 0 15px rgba(76, 175, 80, 0.6); }
 }
 
 /* Responsive mejorado para móviles */
 @media (max-width: 768px) {
     .music-player {
-        bottom: 15px;
-        left: 10px;
-        right: 10px;
+        bottom: 20px;
+        left: 15px;
+        right: 15px;
         max-width: none;
-        padding: 15px 18px;
-        background: rgba(255, 255, 255, 0.3);
-        border: 2px solid rgba(255, 255, 255, 0.5);
+        padding: 12px 15px;
     }
     
     .player-info {
@@ -572,24 +567,30 @@ body {
     }
     
     #nowPlaying {
-        font-size: 0.9em;
+        font-size: 0.8em;
         font-weight: 600;
     }
     
     .music-player button {
-        width: 46px !important;
-        height: 46px !important;
-        font-size: 1.3em;
-    }
-    
-    .player-controls button {
         width: 42px !important;
         height: 42px !important;
         font-size: 1.1em;
     }
     
+    .player-controls button {
+        width: 38px !important;
+        height: 38px !important;
+        font-size: 1em;
+    }
+    
     .player-controls {
         gap: 8px;
+    }
+    
+    /* 🆕 ASEGURAR QUE NO SE SUPERPONGA */
+    .floating-publish-btn {
+        bottom: 95px;
+        right: 20px;
     }
 }
 
@@ -926,7 +927,7 @@ body.composer-mode .post-cell {
 /* 🆕 MEJORAS PARA iOS SAFARI */
 @supports (-webkit-touch-callout: none) {
     .music-player {
-        padding: 16px 18px;
+        padding: 15px 18px;
     }
     
     .music-player button {
@@ -937,41 +938,46 @@ body.composer-mode .post-cell {
 /* 🆕 MEJORAS PARA DISPOSITIVOS PEQUEÑOS */
 @media (max-width: 480px) {
     .music-player {
-        bottom: 10px;
-        left: 8px;
-        right: 8px;
-        padding: 14px 16px;
+        bottom: 15px;
+        left: 10px;
+        right: 10px;
+        padding: 10px 12px;
     }
     
     #nowPlaying {
-        font-size: 0.85em;
+        font-size: 0.75em;
     }
     
     .player-controls {
-        gap: 6px;
+        gap: 4px;
     }
     
     .music-player button {
-        width: 44px !important;
-        height: 44px !important;
+        width: 38px !important;
+        height: 38px !important;
+    }
+    
+    .floating-publish-btn {
+        bottom: 90px;
+        right: 15px;
     }
 }
 
 /* 🆕 ESTILOS ESPECÍFICOS PARA BRAVE MOBILE */
 @media (max-width: 768px) and (hover: none) {
     .music-player {
-        background: rgba(255, 255, 255, 0.35);
-        border: 2px solid rgba(255, 255, 255, 0.6);
-    }
-    
-    .music-player button {
         background: rgba(255, 255, 255, 0.25);
         border: 2px solid rgba(255, 255, 255, 0.4);
     }
     
+    .music-player button {
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
     .music-player button:active {
-        background: rgba(255, 255, 255, 0.4) !important;
-        border-color: rgba(255, 255, 255, 0.6);
+        background: rgba(255, 255, 255, 0.35) !important;
+        border-color: rgba(255, 255, 255, 0.5);
     }
 }
 
