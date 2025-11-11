@@ -2,8 +2,11 @@
 console.log('=== 🚨 INICIANDO SERVIDOR DE EMERGENCIA ===');
 console.log('🔍 PORT:', process.env.PORT);
 console.log('🔍 GOOGLE_SERVICE_EMAIL:', process.env.GOOGLE_SERVICE_EMAIL ? '✅ CONFIGURADO' : '❌ FALTANTE');
+console.log('🔍 GOOGLE_SERVICE_EMAIL_2:', process.env.GOOGLE_SERVICE_EMAIL_2 ? '✅ CONFIGURADO' : '❌ FALTANTE');
 console.log('🔍 SHEET_ID:', process.env.SHEET_ID ? '✅ CONFIGURADO' : '❌ FALTANTE');
+console.log('🔍 SHEET_ID_2:', process.env.SHEET_ID_2 ? '✅ CONFIGURADO' : '❌ FALTANTE');
 console.log('🔍 GOOGLE_PRIVATE_KEY:', process.env.GOOGLE_PRIVATE_KEY ? '✅ CONFIGURADO' : '❌ FALTANTE');
+console.log('🔍 GOOGLE_PRIVATE_KEY_2:', process.env.GOOGLE_PRIVATE_KEY_2 ? '✅ CONFIGURADO' : '❌ FALTANTE');
 
 // 🎯 CATCH ALL PARA ERRORES NO CAPTURADOS
 process.on('uncaughtException', (error) => {
@@ -21,6 +24,186 @@ const fs = require('fs');
 const path = require('path');
 const { GoogleSpreadsheet } = require('google-spreadsheet');
 
+// ============================================================================
+// 🆕 CLASE PARA PERSISTENCIA DE POSTS IMPORTANTES
+// ============================================================================
+class PostsPersistence {
+    constructor() {
+        this.doc = null;
+        this.sheet = null;
+        this.initialized = false;
+        this.lastBackup = null;
+    }
+
+    async init() {
+        try {
+            // 🎯 USAR NUEVAS VARIABLES PARA POSTS
+            if (!process.env.GOOGLE_SERVICE_EMAIL_2 || !process.env.GOOGLE_PRIVATE_KEY_2 || !process.env.SHEET_ID_2) {
+                console.log('⚠️  Google Sheets para posts no configurado - usando solo memoria');
+                return;
+            }
+
+            this.doc = new GoogleSpreadsheet(process.env.SHEET_ID_2);
+            
+            await this.doc.useServiceAccountAuth({
+                client_email: process.env.GOOGLE_SERVICE_EMAIL_2,
+                private_key: process.env.GOOGLE_PRIVATE_KEY_2.replace(/\\n/g, '\n'),
+            });
+
+            await this.doc.loadInfo();
+            this.sheet = this.doc.sheetsByIndex[0];
+            this.initialized = true;
+            
+            console.log('✅ Google Sheets conectado para persistencia de posts');
+        } catch (error) {
+            console.error('❌ Error inicializando Google Sheets para posts:', error.message);
+        }
+    }
+
+    // 🆕 IDENTIFICAR POSTS IMPORTANTES
+    isImportantPost(post) {
+        return post.content.includes('🤝 COLABORACIÓN:') ||
+               post.content.includes('🔍 BUSCO:') || 
+               post.content.includes('💿 PROYECTO:') ||
+               post.content.includes('📅 EVENTO:');
+    }
+
+    // 🆕 GUARDAR POSTS IMPORTANTES
+    async saveImportantPosts(posts) {
+        if (!this.initialized || !this.sheet) {
+            console.log('⚠️  Persistencia no inicializada - omitiendo backup');
+            return;
+        }
+
+        try {
+            const importantPosts = posts.filter(post => this.isImportantPost(post));
+            
+            if (importantPosts.length === 0) {
+                console.log('ℹ️  No hay posts importantes para guardar');
+                return;
+            }
+
+            console.log(`💾 Iniciando backup de ${importantPosts.length} posts importantes...`);
+
+            // Obtener filas existentes
+            const existingRows = await this.sheet.getRows();
+            const existingIds = new Set(existingRows.map(row => row.id));
+
+            // Preparar datos para guardar
+            const postsToSave = importantPosts.filter(post => !existingIds.has(post.id));
+
+            if (postsToSave.length === 0) {
+                console.log('ℹ️  No hay posts nuevos para guardar');
+                return;
+            }
+
+            // Guardar nuevos posts
+            for (const post of postsToSave) {
+                await this.sheet.addRow({
+                    id: post.id,
+                    user: post.user,
+                    content: post.content,
+                    postType: post.postType || 'composer',
+                    interactions: post.interactions || 0,
+                    timestamp: new Date(post.timestamp).toISOString(),
+                    status: 'active',
+                    expiresAt: this.calculateExpiration(post)
+                });
+                console.log(`✅ Guardado post: ${post.id} - ${post.user}`);
+            }
+
+            this.lastBackup = new Date();
+            console.log(`🎉 Backup completado: ${postsToSave.length} posts guardados`);
+
+        } catch (error) {
+            console.error('❌ Error en backup de posts:', error.message);
+        }
+    }
+
+    // 🆕 CARGAR POSTS AL INICIAR EL SERVIDOR
+    async loadPosts() {
+        if (!this.initialized || !this.sheet) {
+            console.log('⚠️  Persistencia no inicializada - cargando posts vacíos');
+            return [];
+        }
+
+        try {
+            const rows = await this.sheet.getRows();
+            const now = new Date();
+            
+            const posts = rows
+                .filter(row => {
+                    // Filtrar posts expirados
+                    const expiresAt = new Date(row.expiresAt);
+                    return expiresAt > now && row.status === 'active';
+                })
+                .map(row => ({
+                    id: row.id,
+                    user: row.user,
+                    content: row.content,
+                    postType: row.postType || 'composer',
+                    interactions: parseInt(row.interactions) || 0,
+                    timestamp: new Date(row.timestamp).getTime(),
+                    comments: [],
+                    status: row.status || 'active',
+                    isPersistent: true // 🆕 Marcar como post persistente
+                }));
+
+            console.log(`📂 Cargados ${posts.length} posts persistentes desde Google Sheets`);
+            return posts;
+        } catch (error) {
+            console.error('❌ Error cargando posts:', error);
+            return [];
+        }
+    }
+
+    calculateExpiration(post) {
+        const now = new Date();
+        if (post.content.includes('🤝 COLABORACIÓN:') || post.content.includes('🔍 BUSCO:')) {
+            return new Date(now.setDate(now.getDate() + 30)).toISOString(); // 30 días
+        } else if (post.content.includes('💿 PROYECTO:')) {
+            return new Date(now.setDate(now.getDate() + 60)).toISOString(); // 60 días
+        } else if (post.content.includes('📅 EVENTO:')) {
+            const eventDate = this.extractEventDate(post.content);
+            return eventDate ? eventDate.toISOString() : new Date(now.setDate(now.getDate() + 7)).toISOString(); // 7 días por defecto
+        }
+        return new Date(now.setDate(now.getDate() + 7)).toISOString(); // 7 días para otros importantes
+    }
+
+    extractEventDate(content) {
+        // Intenta extraer fecha del contenido del evento
+        const dateMatch = content.match(/\d{1,2}\/\d{1,2}\/\d{4}/) || 
+                         content.match(/\d{1,2}-\d{1,2}-\d{4}/);
+        if (dateMatch) {
+            return new Date(dateMatch[0]);
+        }
+        return null;
+    }
+
+    // 🆕 MARCAR POST COMO RESUELTO
+    async markAsResolved(postId) {
+        if (!this.initialized || !this.sheet) return false;
+
+        try {
+            const rows = await this.sheet.getRows();
+            const row = rows.find(r => r.id === postId);
+            if (row) {
+                row.status = 'resolved';
+                await row.save();
+                console.log(`✅ Post ${postId} marcado como resuelto`);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('❌ Error marcando post como resuelto:', error);
+            return false;
+        }
+    }
+}
+
+// ============================================================================
+// 🎵 CLASE SACM TRACKER (EXISTENTE - SIN MODIFICACIONES)
+// ============================================================================
 class SACMTracker {
     constructor() {
         this.doc = null;
@@ -32,7 +215,7 @@ class SACMTracker {
     async init() {
         try {
             if (!process.env.GOOGLE_SERVICE_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.SHEET_ID) {
-                console.log('⚠️  Google Sheets no configurado - usando memoria temporal');
+                console.log('⚠️  Google Sheets SACM no configurado - usando memoria temporal');
                 return;
             }
 
@@ -49,7 +232,7 @@ class SACMTracker {
             
             console.log('✅ Google Sheets conectado para SACM tracking');
         } catch (error) {
-            console.error('❌ Error inicializando Google Sheets:', error.message);
+            console.error('❌ Error inicializando Google Sheets SACM:', error.message);
         }
     }
 
@@ -64,20 +247,18 @@ class SACMTracker {
 
         console.log('🎵 SACM Play:', playData);
 
-        // Intentar guardar en Google Sheets
         if (this.initialized && this.sheet) {
             try {
                 await this.sheet.addRow(playData);
-                console.log('✅ Play guardado en Google Sheets');
+                console.log('✅ Play guardado en Google Sheets SACM');
                 return;
             } catch (error) {
-                console.error('❌ Error guardando en Sheets:', error.message);
+                console.error('❌ Error guardando en Sheets SACM:', error.message);
             }
         }
 
-        // Fallback: memoria temporal
         this.temporaryPlays.push(playData);
-        console.log('📦 Play guardado en memoria temporal');
+        console.log('📦 Play guardado en memoria temporal SACM');
     }
 
     hashCode(str) {
@@ -107,7 +288,7 @@ class SACMTracker {
                 }));
                 allPlays = [...sheetPlays, ...allPlays];
             } catch (error) {
-                console.error('❌ Error obteniendo datos de Sheets:', error);
+                console.error('❌ Error obteniendo datos de Sheets SACM:', error);
             }
         }
 
@@ -120,9 +301,16 @@ class SACMTracker {
     }
 }
 
-// Inicializar tracker
+// ============================================================================
+// 🚀 INICIALIZACIÓN
+// ============================================================================
+
+// Inicializar trackers
 const sacmTracker = new SACMTracker();
 sacmTracker.init();
+
+const postsPersistence = new PostsPersistence();
+postsPersistence.init();
 
 // Configuración de tipos MIME
 const mimeTypes = {
@@ -155,7 +343,7 @@ const server = http.createServer((req, res) => {
         return;
     }
     
-    // 🎯 NUEVO ENDPOINT PARA DESCARGAR REPORTES
+    // 🎯 ENDPOINT PARA DESCARGAR REPORTES SACM
     if (req.url === '/sacm-report' && req.method === 'GET') {
         sacmTracker.generateReport().then(csv => {
             res.setHeader('Content-Type', 'text/csv');
@@ -164,6 +352,30 @@ const server = http.createServer((req, res) => {
         }).catch(error => {
             res.writeHead(500);
             res.end('Error generando reporte: ' + error.message);
+        });
+        return;
+    }
+
+    // 🆕 ENDPOINT PARA MARCAR POST COMO RESUELTO
+    if (req.url.startsWith('/resolve-post/') && req.method === 'POST') {
+        const postId = req.url.split('/')[2];
+        postsPersistence.markAsResolved(postId).then(success => {
+            if (success) {
+                // También eliminar de memoria
+                state.posts = state.posts.filter(p => p.id !== postId);
+                broadcast({
+                    type: 'post_removed',
+                    postId: postId
+                });
+                res.writeHead(200);
+                res.end('Post marcado como resuelto');
+            } else {
+                res.writeHead(404);
+                res.end('Post no encontrado');
+            }
+        }).catch(error => {
+            res.writeHead(500);
+            res.end('Error: ' + error.message);
         });
         return;
     }
@@ -204,6 +416,10 @@ const server = http.createServer((req, res) => {
     });
 });
 
+// ============================================================================
+// 💾 ALMACENAMIENTO EN MEMORIA Y WEBSOCKETS
+// ============================================================================
+
 // WebSocket Server
 const wss = new WebSocket.Server({ server });
 
@@ -211,22 +427,53 @@ const wss = new WebSocket.Server({ server });
 const state = {
     posts: [],
     activeUsers: new Set(),
+    musicPlaylist: [], // 🆕 Para música sincronizada
+    currentTrackIndex: 0
 };
 
-// Limpiar posts viejos
+// 🆕 CARGAR POSTS PERSISTENTES AL INICIAR
+async function initializeServer() {
+    try {
+        const persistentPosts = await postsPersistence.loadPosts();
+        state.posts = [...persistentPosts, ...state.posts];
+        console.log(`🎯 Servidor inicializado con ${state.posts.length} posts (${persistentPosts.length} persistentes)`);
+    } catch (error) {
+        console.error('❌ Error inicializando servidor:', error);
+    }
+}
+
+initializeServer();
+
+// 🆕 BACKUP AUTOMÁTICO CADA 3 MINUTOS
+setInterval(() => {
+    if (postsPersistence.initialized && state.posts.length > 0) {
+        postsPersistence.saveImportantPosts(state.posts);
+    }
+}, 3 * 60 * 1000); // 3 minutos
+
+// Limpiar posts viejos (solo los no importantes)
 function cleanupOldPosts() {
     const now = Date.now();
-    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    const oneDay = 24 * 60 * 60 * 1000;
     
     const initialCount = state.posts.length;
-    state.posts = state.posts.filter(post => (now - post.timestamp) < oneWeek);
+    
+    state.posts = state.posts.filter(post => {
+        // 🆕 Mantener posts importantes y persistentes
+        if (post.isPersistent || postsPersistence.isImportantPost(post)) {
+            return true;
+        }
+        
+        // Posts normales: eliminar después de 24 horas
+        return (now - post.timestamp) < oneDay;
+    });
     
     if (initialCount !== state.posts.length) {
         console.log(`🧹 Limpieza: ${initialCount} → ${state.posts.length} posts`);
     }
 }
 
-setInterval(cleanupOldPosts, 60 * 60 * 1000);
+setInterval(cleanupOldPosts, 60 * 60 * 1000); // Cada hora
 
 // 🎵 MEJORADO: Manejar nueva publicación con sistema de tipos
 function handleNewPost(socket, data) {
@@ -292,7 +539,14 @@ function handleNewPost(socket, data) {
     // Agregar a la lista de posts
     state.posts.unshift(newPost);
     
-    // Limitar a 200 posts máximo
+    // 🆕 GUARDAR INMEDIATAMENTE SI ES IMPORTANTE
+    if (postsPersistence.isImportantPost(newPost)) {
+        setTimeout(() => {
+            postsPersistence.saveImportantPosts([newPost]);
+        }, 1000);
+    }
+    
+    // Limitar a 200 posts máximo (solo posts en memoria)
     if (state.posts.length > 200) {
         state.posts = state.posts.slice(0, 200);
     }
@@ -380,7 +634,7 @@ function handleMessage(socket, data) {
         case 'heartbeat':
             socket.send(JSON.stringify({ type: 'heartbeat_ack' }));
             break;
-        // 🎯 NUEVO: Eventos de música para SACM
+        // 🎯 Eventos de música para SACM
         case 'music_play_start':
             console.log('🎵 Inicio de reproducción:', data.songId, 'por', data.userId);
             break;
@@ -427,6 +681,10 @@ wss.on('connection', (socket, req) => {
 // Manejar cierre graceful del servidor
 process.on('SIGINT', () => {
     console.log('🛑 Cerrando servidor...');
+    // 🆕 HACER BACKUP FINAL ANTES DE CERRAR
+    if (postsPersistence.initialized) {
+        postsPersistence.saveImportantPosts(state.posts);
+    }
     wss.close(() => {
         console.log('✅ WebSocket server cerrado');
         server.close(() => {
@@ -439,7 +697,6 @@ process.on('SIGINT', () => {
 // Iniciar servidor
 const PORT = process.env.PORT || 8000;
 
-// 🎯 AGREGAR ESTA VERIFICACIÓN DE ERRORES ANTES DE LISTEN
 server.on('error', (error) => {
     console.error('💥 ERROR del servidor:', error);
     if (error.code === 'EADDRINUSE') {
@@ -447,21 +704,19 @@ server.on('error', (error) => {
     }
 });
 
-server.listen(PORT, '0.0.0.0', () => {  // ← 🎯 AÑADIR '0.0.0.0'
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor MESH ejecutándose en puerto ${PORT}`);
     console.log('🎵 Sistema de compositores ACTIVADO - Posts ilimitados para contenido musical');
-    console.log('📁 Servidor de archivos estáticos LISTO');
-    console.log('💾 Almacenamiento en memoria activo (200 posts máximo)');
-    console.log('✅ SACM Tracking: ACTIVADO');
-    console.log('📊 Endpoint reportes: /sacm-report');
-    console.log('🌟 Características:');
-    console.log('   - Posts generales: 1 por día');
-    console.log('   - Posts de compositores: ILIMITADOS');
-    console.log('   - Letras, acordes, eventos, colaboraciones, proyectos');
-    console.log('   - Sistema de badges y efectos visuales');
+    console.log('💾 Sistema de persistencia ACTIVADO - Posts importantes se guardan en Google Sheets');
+    console.log('📊 Backup automático cada 3 minutos');
+    console.log('🔧 Características:');
+    console.log('   - Posts generales: 1 por día, duran 24h');
+    console.log('   - Posts importantes: Persisten hasta resolución');
+    console.log('   - Colaboraciones: 30 días');
+    console.log('   - Proyectos: 60 días');
+    console.log('   - Eventos: Hasta la fecha del evento');
 });
 
-// 🎯 AGREGAR ESTO PARA DEBUG
 process.on('uncaughtException', (error) => {
     console.error('💥 UNCAUGHT EXCEPTION:', error);
 });
