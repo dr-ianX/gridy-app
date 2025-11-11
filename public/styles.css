@@ -440,12 +440,12 @@ body {
     background: rgba(255, 255, 255, 0.15);
     backdrop-filter: blur(15px);
     border-radius: 25px;
-    padding: 12px 18px;
+    padding: 8px 12px;
     color: white;
     z-index: 999; /* 🆕 DEBAJO DEL BOTÓN + */
     border: 2px solid rgba(255, 255, 255, 0.3);
     font-family: Arial, sans-serif;
-    max-width: 280px; /* 🆕 MÁS ANCHO EN DESKTOP */
+    max-width: 480px; /* 🆕 MÁS ANCHO EN DESKTOP */
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
     display: flex;
     align-items: center;
@@ -454,7 +454,7 @@ body {
 }
 
 /* 🆕 VERSIÓN MÓVIL COMPACTA */
-@media (max-width: 768px) {
+@media (max-width: 358px) {
     .music-player {
         bottom: 20px;
         left: 15px;
@@ -553,7 +553,7 @@ body {
 }
 
 /* Responsive mejorado para móviles */
-@media (max-width: 768px) {
+@media (max-width: 358px) {
     .music-player {
         bottom: 20px;
         left: 15px;
