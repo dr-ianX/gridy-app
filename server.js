@@ -111,7 +111,7 @@ class SACMTracker {
             }
         }
 
-        const csvHeader = 'timestamp,song_id,user_hash,duration_seconds,country\n';
+        const csvHeader = 'timestamp,song_id,user_hash,duration_seconds,country,isrc,registro_indautor,registro_sacm\n';
         const csvRows = allPlays.map(play => 
             `"${play.timestamp}","${play.song_id}","${play.user_hash}",${play.duration_seconds},"${play.country}"`
         ).join('\n');
