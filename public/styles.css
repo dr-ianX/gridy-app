@@ -821,3 +821,112 @@ body.composer-mode .post-cell {
     font-size: 0.6em;
     font-weight: bold;
 }
+
+/* 🆕 ESTILOS MEJORADOS PARA MÓVILES */
+@media (max-width: 768px) {
+    .music-player {
+        bottom: 15px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        padding: 12px 15px;
+        font-size: 14px;
+        background: rgba(255, 255, 255, 0.25);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .music-player button {
+        width: 44px !important;  /* Tamaño mínimo para touch */
+        height: 44px !important;
+        font-size: 1.3em;
+        padding: 8px;
+    }
+
+    .player-info {
+        min-width: 0;
+        flex-grow: 1;
+    }
+
+    #nowPlaying {
+        font-size: 0.85em;
+        font-weight: 500;
+    }
+
+    .player-controls {
+        gap: 8px;
+    }
+
+    /* 🆕 BOTONES MÁS GRANDES PARA MÓVILES */
+    .music-toggle-btn, .control-btn {
+        min-width: 44px;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+}
+
+/* 🆕 MENSAJE DE AYUDA PARA MÓVILES */
+.mobile-help {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    right: 0;
+    background: rgba(255, 107, 107, 0.9);
+    color: white;
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 0.8em;
+    text-align: center;
+    animation: pulseHelp 2s infinite;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+@keyframes pulseHelp {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+/* 🆕 MEJORAS TÁCTILES GENERALES */
+.music-player button {
+    touch-action: manipulation; /* Mejorar respuesta táctil */
+    user-select: none; /* Evitar selección de texto */
+    -webkit-tap-highlight-color: transparent; /* Quitar highlight azul en iOS */
+}
+
+/* 🆕 ESTADOS DE BOTONES EN MÓVILES */
+.music-player button:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* 🆕 MEJORAS PARA iOS SAFARI */
+@supports (-webkit-touch-callout: none) {
+    .music-player {
+        padding: 15px;
+    }
+    
+    .music-player button {
+        cursor: pointer;
+    }
+}
+
+/* 🆕 MEJORAS PARA DISPOSITIVOS PEQUEÑOS */
+@media (max-width: 480px) {
+    .music-player {
+        bottom: 10px;
+        left: 5px;
+        right: 5px;
+        padding: 10px 12px;
+    }
+    
+    #nowPlaying {
+        font-size: 0.8em;
+    }
+    
+    .player-controls {
+        gap: 5px;
+    }
+}
