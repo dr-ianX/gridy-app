@@ -780,7 +780,7 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO MEJORADO - VERSIÓN FUNCIONAL
+// 🎵 REPRODUCTOR DE AUDIO COMPATIBLE CON MÓVILES
 class MusicPlayer {
     constructor(gridyClient) {
         this.gridyClient = gridyClient;
@@ -791,14 +791,19 @@ class MusicPlayer {
         this.trackStartTime = 0;
         this.currentTrackName = '';
         this.playlist = [];
+        this.userInteracted = false; // 🆕 Para controlar interacción del usuario
+        this.audioLoaded = false; // 🆕 Para saber si el audio está listo
         
-        // 🎯 Configurar audio para mejor compatibilidad
+        // 🎯 Configurar audio para máxima compatibilidad
         this.audio.preload = 'auto';
         this.audio.crossOrigin = 'anonymous';
+        this.audio.volume = 0.8; // 🆕 Volumen por defecto
+        
+        console.log('🎵 Music Player inicializado - listo para móviles');
     }
 
     init() {
-        console.log('🎵 Inicializando Music Player...');
+        console.log('🎵 Inicializando Music Player para móviles...');
         this.createPlayerUI();
         this.setupAudioEvents();
         
@@ -820,7 +825,7 @@ class MusicPlayer {
         }
     }
 
-    // 🎯 PLAYLIST POR DEFECTO POR SI FALLA LA CONEXIÓN
+    // 🎯 PLAYLIST POR DEFECTO
     loadDefaultPlaylist() {
         this.playlist = [
             { 
@@ -852,25 +857,144 @@ class MusicPlayer {
         if (document.getElementById('musicToggle')) return;
 
         const playerHTML = `
-            <div class="music-player">
-                <button id="musicToggle">🎵</button>
+            <div class="music-player" id="musicPlayerContainer">
+                <button id="musicToggle" class="music-toggle-btn">🎵</button>
                 <div class="player-info">
                     <span id="nowPlaying">Música Comunal TCSACM</span>
                     <div class="player-controls">
-                        <button id="prevTrack">⏮️</button>
-                        <button id="nextTrack">⏭️</button>
+                        <button id="prevTrack" class="control-btn">⏮️</button>
+                        <button id="nextTrack" class="control-btn">⏭️</button>
                     </div>
+                </div>
+                <!-- 🆕 MENSAJE PARA MÓVILES -->
+                <div id="mobileHelp" class="mobile-help" style="display: none;">
+                    👆 Toca para activar la música
                 </div>
             </div>
         `;
         document.body.insertAdjacentHTML('beforeend', playerHTML);
 
-        // Configurar event listeners
-        document.getElementById('musicToggle').addEventListener('click', () => this.togglePlay());
-        document.getElementById('prevTrack').addEventListener('click', () => this.prevTrack());
-        document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
+        // 🎯 CONFIGURAR EVENT LISTENERS ESPECIALES PARA MÓVILES
+        this.setupMobileEvents();
         
-        console.log('🎵 UI del Music Player creada');
+        console.log('🎵 UI del Music Player creada con soporte móvil');
+    }
+
+    // 🆕 CONFIGURACIÓN ESPECIAL PARA MÓVILES
+    setupMobileEvents() {
+        const musicToggle = document.getElementById('musicToggle');
+        const prevTrack = document.getElementById('prevTrack');
+        const nextTrack = document.getElementById('nextTrack');
+        const playerContainer = document.getElementById('musicPlayerContainer');
+
+        // 🎯 DETECTAR SI ES MÓVIL
+        const isMobile = this.isMobileDevice();
+
+        // 🎯 EVENTO PRINCIPAL - Manejar primera interacción
+        const handleFirstInteraction = () => {
+            if (!this.userInteracted) {
+                console.log('📱 Primera interacción del usuario en móvil');
+                this.userInteracted = true;
+                this.hideMobileHelp();
+                
+                // 🎯 En móviles, precargar el audio en la primera interacción
+                this.preloadCurrentTrack();
+            }
+        };
+
+        // 🎯 AGREGAR EVENTOS TÁCTILES PARA MÓVILES
+        if (isMobile) {
+            // Mostrar ayuda para móviles
+            this.showMobileHelp();
+            
+            // Agregar eventos táctiles
+            musicToggle.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleFirstInteraction();
+                this.togglePlay();
+            }, { passive: false });
+
+            prevTrack.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleFirstInteraction();
+                this.prevTrack();
+            }, { passive: false });
+
+            nextTrack.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                handleFirstInteraction();
+                this.nextTrack();
+            }, { passive: false });
+
+            // 🎯 Tocar cualquier parte del player cuenta como interacción
+            playerContainer.addEventListener('touchstart', (e) => {
+                if (!this.userInteracted) {
+                    e.preventDefault();
+                    handleFirstInteraction();
+                }
+            }, { passive: false });
+
+        } else {
+            // 🎯 EVENTOS NORMALES PARA DESKTOP
+            musicToggle.addEventListener('click', () => {
+                handleFirstInteraction();
+                this.togglePlay();
+            });
+
+            prevTrack.addEventListener('click', () => {
+                handleFirstInteraction();
+                this.prevTrack();
+            });
+
+            nextTrack.addEventListener('click', () => {
+                handleFirstInteraction();
+                this.nextTrack();
+            });
+        }
+    }
+
+    // 🆕 DETECTAR DISPOSITIVO MÓVIL
+    isMobileDevice() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    }
+
+    // 🆕 MOSTRAR AYUDA PARA MÓVILES
+    showMobileHelp() {
+        const mobileHelp = document.getElementById('mobileHelp');
+        if (mobileHelp && this.isMobileDevice() && !this.userInteracted) {
+            mobileHelp.style.display = 'block';
+            
+            // Ocultar después de 5 segundos
+            setTimeout(() => {
+                this.hideMobileHelp();
+            }, 5000);
+        }
+    }
+
+    // 🆕 OCULTAR AYUDA PARA MÓVILES
+    hideMobileHelp() {
+        const mobileHelp = document.getElementById('mobileHelp');
+        if (mobileHelp) {
+            mobileHelp.style.display = 'none';
+        }
+    }
+
+    // 🆕 PRECARGAR AUDIO (IMPORTANTE PARA MÓVILES)
+    preloadCurrentTrack() {
+        if (this.playlist.length === 0) return;
+        
+        const track = this.playlist[this.currentTrackIndex];
+        if (!track) return;
+
+        console.log('📱 Precargando audio para móvil:', track.file);
+        
+        // Crear un audio temporal para precargar
+        const tempAudio = new Audio();
+        tempAudio.src = track.file;
+        tempAudio.preload = 'auto';
+        tempAudio.load();
+        
+        this.audioLoaded = true;
     }
 
     updatePlayerUI() {
@@ -895,10 +1019,20 @@ class MusicPlayer {
 
         this.audio.addEventListener('canplaythrough', () => {
             console.log('✅ Audio listo para reproducir');
+            this.audioLoaded = true;
         });
 
         this.audio.addEventListener('loadstart', () => {
             console.log('🔍 Cargando audio...');
+        });
+
+        // 🆕 MANEJAR ERRORES ESPECÍFICOS DE MÓVILES
+        this.audio.addEventListener('play', () => {
+            console.log('▶️ Reproducción iniciada');
+        });
+
+        this.audio.addEventListener('pause', () => {
+            console.log('⏸️ Reproducción pausada');
         });
     }
 
@@ -911,6 +1045,12 @@ class MusicPlayer {
     }
 
     togglePlay() {
+        if (!this.userInteracted && this.isMobileDevice()) {
+            console.log('📱 Usuario no ha interactuado todavía en móvil');
+            this.showMobileHelp();
+            return;
+        }
+
         if (this.isPlaying) {
             this.pause();
         } else {
@@ -933,26 +1073,58 @@ class MusicPlayer {
 
         console.log('🎵 Intentando reproducir:', track.file);
         
+        // 🎯 EN MÓVILES: Asegurarse de que el usuario ya interactuó
+        if (this.isMobileDevice() && !this.userInteracted) {
+            console.log('📱 Bloqueado: usuario no ha interactuado en móvil');
+            this.showMobileHelp();
+            return;
+        }
+
         this.startSACMTracking(track.name);
         
         this.audio.src = track.file;
         
-        // 🎯 Intentar reproducir con manejo de errores mejorado
-        const playPromise = this.audio.play();
-        
-        if (playPromise !== undefined) {
-            playPromise.then(() => {
-                this.isPlaying = true;
-                document.getElementById('musicToggle').textContent = '⏸️';
-                this.updatePlayerUI();
-                console.log('✅ Reproducción iniciada correctamente');
-            }).catch(error => {
-                console.error('❌ Error al reproducir:', error);
-                this.showError('Haz clic para reproducir');
-                // Resetear estado
-                this.isPlaying = false;
-                document.getElementById('musicToggle').textContent = '🎵';
-            });
+        // 🎯 ESTRATEGIA MEJORADA PARA MÓVILES
+        const playAudio = () => {
+            const playPromise = this.audio.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    this.isPlaying = true;
+                    document.getElementById('musicToggle').textContent = '⏸️';
+                    this.updatePlayerUI();
+                    console.log('✅ Reproducción iniciada correctamente');
+                }).catch(error => {
+                    console.error('❌ Error al reproducir:', error);
+                    
+                    // 🎯 MANEJO ESPECÍFICO DE ERRORES EN MÓVILES
+                    if (this.isMobileDevice()) {
+                        this.showError('Toca para reproducir 🔊');
+                        // 🎯 Intentar de nuevo con un pequeño retraso
+                        setTimeout(() => {
+                            this.audio.play().catch(e => {
+                                console.error('❌ Segundo intento fallido:', e);
+                            });
+                        }, 100);
+                    } else {
+                        this.showError('Haz clic para reproducir');
+                    }
+                    
+                    this.isPlaying = false;
+                    document.getElementById('musicToggle').textContent = '🎵';
+                });
+            }
+        };
+
+        // 🎯 EN MÓVILES: Esperar a que el audio esté listo
+        if (this.isMobileDevice() && !this.audioLoaded) {
+            console.log('📱 Esperando a que el audio se cargue...');
+            this.audio.load();
+            this.audio.addEventListener('canplaythrough', () => {
+                playAudio();
+            }, { once: true });
+        } else {
+            playAudio();
         }
     }
 
@@ -998,6 +1170,7 @@ class MusicPlayer {
         
         this.pause();
         this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
+        this.audioLoaded = false; // 🆕 Resetear estado de carga
         this.playCurrentTrack();
     }
 
@@ -1006,6 +1179,7 @@ class MusicPlayer {
         
         this.pause();
         this.currentTrackIndex = (this.currentTrackIndex - 1 + this.playlist.length) % this.playlist.length;
+        this.audioLoaded = false; // 🆕 Resetear estado de carga
         this.playCurrentTrack();
     }
 
@@ -1013,6 +1187,11 @@ class MusicPlayer {
         const nowPlaying = document.getElementById('nowPlaying');
         if (nowPlaying) {
             nowPlaying.textContent = message;
+            // 🎯 Destacar el mensaje de error
+            nowPlaying.style.color = '#ff6b6b';
+            setTimeout(() => {
+                nowPlaying.style.color = '';
+            }, 3000);
         }
         document.getElementById('musicToggle').textContent = '🎵';
     }
