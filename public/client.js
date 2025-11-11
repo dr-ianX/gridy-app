@@ -6,7 +6,7 @@ class GridyClient {
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
         this.currentPost = null;
-        this.musicPlayer = new MusicPlayer(this); // Pasamos la referencia del cliente
+        this.musicPlayer = new MusicPlayer(this); // Pasamos la referencia
         this.composerMode = true;
         
         this.init();
@@ -19,9 +19,12 @@ class GridyClient {
         this.connect();
         this.loadTheme();
         this.startVisualDecay();
-        this.musicPlayer.init();
         this.createComposerFeatures();
-        this.createDynamicBackground(); // 🆕 Fondo dinámico
+        this.createDynamicBackground();
+        // 🎯 INICIALIZAR MUSIC PLAYER DESPUÉS DE CREAR LA UI
+        setTimeout(() => {
+            this.musicPlayer.init();
+        }, 1000);
     }
     
     loadUser() {
@@ -155,8 +158,17 @@ class GridyClient {
     updateDynamicBackground(imageUrl) {
         const bg = document.getElementById('dynamicBackground');
         if (bg && imageUrl) {
-            bg.style.backgroundImage = `url(${imageUrl})`;
-            bg.style.opacity = '0.15'; // 🎯 Ajusta la opacidad para mejor legibilidad
+            // 🎯 Verificar que la imagen exista antes de intentar cargarla
+            const img = new Image();
+            img.onload = () => {
+                bg.style.backgroundImage = `url(${imageUrl})`;
+                bg.style.opacity = '0.15';
+            };
+            img.onerror = () => {
+                console.log('🖼️ Imagen de fondo no encontrada:', imageUrl);
+                bg.style.backgroundImage = 'none';
+            };
+            img.src = imageUrl;
         }
     }
 
@@ -301,9 +313,10 @@ class GridyClient {
             case 'welcome':
                 console.log('👋', data.message);
                 this.posts = data.posts || [];
-                // 🎯 Sincronizar música con el servidor
-                if (data.musicState) {
-                    this.musicPlayer.syncWithServer(data.musicState);
+                // 🎯 CRÍTICO: Pasar la playlist al music player
+                if (data.dailyPlaylist) {
+                    console.log('🎵 Recibiendo playlist del servidor:', data.dailyPlaylist.length, 'canciones');
+                    this.musicPlayer.syncPlaylist(data.dailyPlaylist);
                 }
                 this.renderGrid();
                 break;
@@ -383,7 +396,7 @@ class GridyClient {
 
         setTimeout(() => {
             this.setupReactionEvents();
-            this.setupResolveButtons(); // 🆕 Configurar botones de resolución
+            this.setupResolveButtons();
         }, 100);
     }
     
@@ -407,7 +420,7 @@ class GridyClient {
             <div class="user-name">${post.user}</div>
             <div class="post-content">${post.content}</div>
             ${this.addQuickReactions(post)}
-            ${this.addResolveButton(post)} <!-- 🆕 Botón de resolución -->
+            ${this.addResolveButton(post)}
         `;
         
         cell.addEventListener('click', () => this.openPostModal(post));
@@ -457,7 +470,6 @@ class GridyClient {
         .then(response => {
             if (response.ok) {
                 console.log('✅ Post marcado como resuelto');
-                // El post se eliminará automáticamente cuando llegue el broadcast
             } else {
                 alert('Error al marcar el post como resuelto');
             }
@@ -756,7 +768,7 @@ class GridyClient {
             const decayRate = this.isImportantPost(post) ? 0.3 : 1;
             
             if (hoursOld > 2 && post.interactions > 0) {
-                const decay = Math.floor((hoursOld / 6) * decayRate); // Más lento
+                const decay = Math.floor((hoursOld / 6) * decayRate);
                 post.interactions = Math.max(0, post.interactions - decay);
                 hasChanges = true;
             }
@@ -768,7 +780,7 @@ class GridyClient {
     }
 }
 
-// 🎵 REPRODUCTOR DE AUDIO MEJORADO CON SINCRONIZACIÓN
+// 🎵 REPRODUCTOR DE AUDIO MEJORADO - VERSIÓN FUNCIONAL
 class MusicPlayer {
     constructor(gridyClient) {
         this.gridyClient = gridyClient;
@@ -779,26 +791,66 @@ class MusicPlayer {
         this.trackStartTime = 0;
         this.currentTrackName = '';
         this.playlist = [];
+        
+        // 🎯 Configurar audio para mejor compatibilidad
+        this.audio.preload = 'auto';
+        this.audio.crossOrigin = 'anonymous';
     }
 
     init() {
+        console.log('🎵 Inicializando Music Player...');
         this.createPlayerUI();
         this.setupAudioEvents();
+        
+        // 🎯 Cargar playlist por defecto si no hay del servidor
+        if (this.playlist.length === 0) {
+            this.loadDefaultPlaylist();
+        }
     }
 
-    // 🎯 SINCRONIZAR SOLO LA PLAYLIST, NO LA REPRODUCCIÓN
+    // 🎯 SINCRONIZAR CON PLAYLIST DEL SERVIDOR
     syncPlaylist(serverPlaylist) {
+        console.log('🎵 Sincronizando playlist con servidor:', serverPlaylist);
         this.playlist = serverPlaylist;
-        console.log('🎵 Playlist sincronizada:', this.playlist.map(t => t.name));
         
-        // Si no estamos reproduciendo, empezar con la primera canción
-        if (!this.isPlaying && this.playlist.length > 0) {
+        // Actualizar UI con la primera canción
+        if (this.playlist.length > 0) {
             this.currentTrackIndex = 0;
             this.updatePlayerUI();
         }
     }
 
+    // 🎯 PLAYLIST POR DEFECTO POR SI FALLA LA CONEXIÓN
+    loadDefaultPlaylist() {
+        this.playlist = [
+            { 
+                name: "🎵 4 - dR.iAn", 
+                file: "/Music/track1.mp3",
+                image: "/Music/track1.jpg"
+            },
+            { 
+                name: "🎵 Me Reconozco - Rodrigo Escamilla", 
+                file: "/Music/mereconozco.mp3",
+                image: "/Music/mereconozco.jpg"
+            },
+            {   
+                name: "🎵 Toda La Noche - Mariu", 
+                file: "/Music/mariutodalanoche.mp3",
+                image: "/Music/mariutodalanoche.jpg"
+            },
+            {   
+                name: "🎵 A Contratiempo - Demian Cobo ft. Daniel Tejeda", 
+                file: "/Music/acontratiempo.mp3",
+                image: "/Music/acontratiempo.jpg"
+            }
+        ];
+        console.log('🎵 Playlist por defecto cargada');
+    }
+
     createPlayerUI() {
+        // Evitar duplicados
+        if (document.getElementById('musicToggle')) return;
+
         const playerHTML = `
             <div class="music-player">
                 <button id="musicToggle">🎵</button>
@@ -813,27 +865,40 @@ class MusicPlayer {
         `;
         document.body.insertAdjacentHTML('beforeend', playerHTML);
 
+        // Configurar event listeners
         document.getElementById('musicToggle').addEventListener('click', () => this.togglePlay());
         document.getElementById('prevTrack').addEventListener('click', () => this.prevTrack());
         document.getElementById('nextTrack').addEventListener('click', () => this.nextTrack());
+        
+        console.log('🎵 UI del Music Player creada');
     }
 
     updatePlayerUI() {
         const currentTrack = this.playlist[this.currentTrackIndex];
         if (currentTrack) {
             document.getElementById('nowPlaying').textContent = `Sonando: ${currentTrack.name}`;
+            // 🎯 Actualizar fondo dinámico
             this.gridyClient.updateDynamicBackground(currentTrack.image);
         }
     }
 
     setupAudioEvents() {
         this.audio.addEventListener('ended', () => {
+            console.log('🎵 Canción terminada, pasando a la siguiente...');
             this.handleTrackEnd();
         });
 
         this.audio.addEventListener('error', (e) => {
             console.error('❌ Error de audio:', e);
             this.showError('Error cargando audio');
+        });
+
+        this.audio.addEventListener('canplaythrough', () => {
+            console.log('✅ Audio listo para reproducir');
+        });
+
+        this.audio.addEventListener('loadstart', () => {
+            console.log('🔍 Cargando audio...');
         });
     }
 
@@ -854,25 +919,41 @@ class MusicPlayer {
     }
 
     playCurrentTrack() {
+        if (this.playlist.length === 0) {
+            console.log('❌ No hay playlist disponible');
+            this.showError('No hay música disponible');
+            return;
+        }
+
         const track = this.playlist[this.currentTrackIndex];
         if (!track) {
             console.log('❌ No hay track disponible');
             return;
         }
 
-        console.log('🎵 Reproduciendo:', track.file);
+        console.log('🎵 Intentando reproducir:', track.file);
         
         this.startSACMTracking(track.name);
         
         this.audio.src = track.file;
-        this.audio.play().then(() => {
-            this.isPlaying = true;
-            document.getElementById('musicToggle').textContent = '⏸️';
-            this.updatePlayerUI();
-        }).catch(error => {
-            console.error('❌ Error al reproducir:', error);
-            this.showError('No se pudo reproducir');
-        });
+        
+        // 🎯 Intentar reproducir con manejo de errores mejorado
+        const playPromise = this.audio.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                this.isPlaying = true;
+                document.getElementById('musicToggle').textContent = '⏸️';
+                this.updatePlayerUI();
+                console.log('✅ Reproducción iniciada correctamente');
+            }).catch(error => {
+                console.error('❌ Error al reproducir:', error);
+                this.showError('Haz clic para reproducir');
+                // Resetear estado
+                this.isPlaying = false;
+                document.getElementById('musicToggle').textContent = '🎵';
+            });
+        }
     }
 
     // 🎯 Método para tracking SACM
@@ -929,7 +1010,10 @@ class MusicPlayer {
     }
 
     showError(message) {
-        document.getElementById('nowPlaying').textContent = message;
+        const nowPlaying = document.getElementById('nowPlaying');
+        if (nowPlaying) {
+            nowPlaying.textContent = message;
+        }
         document.getElementById('musicToggle').textContent = '🎵';
     }
 }
