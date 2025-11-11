@@ -796,7 +796,7 @@ process.on('SIGINT', () => {
 });
 
 // Iniciar servidor
-const PORT = process.env.PORT || 8000;
+const PORT = process.env.PORT || 10000;
 
 server.on('error', (error) => {
     console.error('💥 ERROR del servidor:', error);
