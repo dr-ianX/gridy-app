@@ -689,6 +689,10 @@ class MusicPlayer {
             {   
                 name: "🎵 Toda La Noche - Mariu", 
                 file: "/Music/mariutodalanoche.mp3" 
+            },
+            {   
+                name: "🎵 A Contratiempo - Demian Cobo ft. Daniel Tejeda", 
+                file: "/Music/acontratiempo.mp3" 
             }
         ];
         this.currentTrackIndex = 0;
