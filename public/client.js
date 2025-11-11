@@ -322,11 +322,6 @@ class GridyClient {
                 alert(`Error: ${data.message}`);
                 break;
 
-            // 🎯 Actualización de música sincronizada
-            case 'music_update':
-                this.musicPlayer.syncWithServer(data.musicState);
-                break;
-
             // 🆕 Post removido (resuelto)
             case 'post_removed':
                 this.posts = this.posts.filter(p => p.id !== data.postId);
@@ -791,27 +786,15 @@ class MusicPlayer {
         this.setupAudioEvents();
     }
 
-    // 🎯 SINCRONIZAR CON EL SERVIDOR
-    syncWithServer(musicState) {
-        this.playlist = musicState.playlist;
-        this.currentTrackIndex = musicState.currentTrackIndex;
-        this.isPlaying = musicState.isPlaying;
-
-        console.log('🎵 Sincronizando música:', {
-            track: this.playlist[this.currentTrackIndex]?.name,
-            playing: this.isPlaying
-        });
-
-        // Actualizar UI
-        this.updatePlayerUI();
-
-        // Sincronizar reproducción
-        if (this.isPlaying && !this.audio.paused) {
-            // Ya está reproduciendo, no hacer nada
-        } else if (this.isPlaying && this.audio.paused) {
-            this.playCurrentTrack();
-        } else {
-            this.pause();
+    // 🎯 SINCRONIZAR SOLO LA PLAYLIST, NO LA REPRODUCCIÓN
+    syncPlaylist(serverPlaylist) {
+        this.playlist = serverPlaylist;
+        console.log('🎵 Playlist sincronizada:', this.playlist.map(t => t.name));
+        
+        // Si no estamos reproduciendo, empezar con la primera canción
+        if (!this.isPlaying && this.playlist.length > 0) {
+            this.currentTrackIndex = 0;
+            this.updatePlayerUI();
         }
     }
 
@@ -839,7 +822,6 @@ class MusicPlayer {
         const currentTrack = this.playlist[this.currentTrackIndex];
         if (currentTrack) {
             document.getElementById('nowPlaying').textContent = `Sonando: ${currentTrack.name}`;
-            // 🎯 Actualizar fondo dinámico
             this.gridyClient.updateDynamicBackground(currentTrack.image);
         }
     }
@@ -859,15 +841,15 @@ class MusicPlayer {
         const duration = Math.floor((Date.now() - this.trackStartTime) / 1000);
         this.completeSACMTracking(this.currentTrackName, duration);
         
-        // 🎯 Sincronizar con servidor para siguiente canción
-        this.sendMusicCommand('next');
+        // 🎯 Cambiar a siguiente canción automáticamente
+        this.nextTrack();
     }
 
     togglePlay() {
         if (this.isPlaying) {
-            this.sendMusicCommand('pause');
+            this.pause();
         } else {
-            this.sendMusicCommand('play');
+            this.playCurrentTrack();
         }
     }
 
@@ -931,24 +913,19 @@ class MusicPlayer {
     }
 
     nextTrack() {
-        this.sendMusicCommand('next');
+        if (this.playlist.length === 0) return;
+        
+        this.pause();
+        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
+        this.playCurrentTrack();
     }
 
     prevTrack() {
-        // En modo sincronizado, no permitimos prev para mantener consistencia
-        console.log('⚠️ Prev track no disponible en modo sincronizado');
-    }
-
-    // 🎯 ENVIAR COMANDOS DE MÚSICA AL SERVIDOR
-    sendMusicCommand(command) {
-        if (this.gridyClient.socket?.readyState === WebSocket.OPEN) {
-            this.gridyClient.socket.send(JSON.stringify({
-                type: 'music_command',
-                command: command
-            }));
-        } else {
-            console.error('❌ WebSocket no conectado para comando de música');
-        }
+        if (this.playlist.length === 0) return;
+        
+        this.pause();
+        this.currentTrackIndex = (this.currentTrackIndex - 1 + this.playlist.length) % this.playlist.length;
+        this.playCurrentTrack();
     }
 
     showError(message) {

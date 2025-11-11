@@ -302,15 +302,15 @@ class SACMTracker {
 }
 
 // ============================================================================
-// 🎵 SISTEMA DE MÚSICA SINCRONIZADA
+// 🎵 SISTEMA DE PLAYLIST DIARIA (SOLO PARA GENERAR LISTA, NO CONTROL)
 // ============================================================================
-class SyncedMusicSystem {
+class DailyPlaylist {
     constructor() {
         this.tracks = [
             { 
                 name: "🎵 4 - dR.iAn", 
                 file: "/Music/track1.mp3",
-                image: "/Music/track1.jpg" // 🆕 Imagen de fondo
+                image: "/Music/track1.jpg"
             },
             { 
                 name: "🎵 Me Reconozco - Rodrigo Escamilla", 
@@ -328,44 +328,34 @@ class SyncedMusicSystem {
                 image: "/Music/acontratiempo.jpg"
             }
         ];
-        this.currentTrackIndex = 0;
-        this.isPlaying = false;
-        this.playlist = [];
-        this.generateDailyPlaylist();
+        this.currentPlaylist = this.generateDailyPlaylist();
     }
 
-    // 🎯 Generar playlist aleatoria pero igual para todos los usuarios
+    // 🎯 Generar playlist aleatoria diaria
     generateDailyPlaylist() {
-        // Usar la fecha como semilla para playlist diaria consistente
         const today = new Date().toDateString();
         const seed = today.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
         
-        // Mezclar aleatoriamente pero consistente para el día
-        this.playlist = [...this.tracks];
-        for (let i = this.playlist.length - 1; i > 0; i--) {
+        const playlist = [...this.tracks];
+        for (let i = playlist.length - 1; i > 0; i--) {
             const j = Math.floor((seed + i) % (i + 1));
-            [this.playlist[i], this.playlist[j]] = [this.playlist[j], this.playlist[i]];
+            [playlist[i], playlist[j]] = [playlist[j], playlist[i]];
         }
         
-        console.log('🎵 Playlist diaria generada:', this.playlist.map(t => t.name));
+        console.log('🎵 Playlist diaria generada:', playlist.map(t => t.name));
+        return playlist;
     }
 
-    getCurrentTrack() {
-        return this.playlist[this.currentTrackIndex];
-    }
-
-    nextTrack() {
-        this.currentTrackIndex = (this.currentTrackIndex + 1) % this.playlist.length;
-        return this.getCurrentTrack();
-    }
-
-    getMusicState() {
-        return {
-            currentTrack: this.getCurrentTrack(),
-            currentTrackIndex: this.currentTrackIndex,
-            isPlaying: this.isPlaying,
-            playlist: this.playlist
-        };
+    getDailyPlaylist() {
+        // Regenerar playlist si es un nuevo día
+        const today = new Date().toDateString();
+        const lastGenerated = this.currentPlaylist[0] ? new Date().toDateString() : null;
+        
+        if (!lastGenerated || lastGenerated !== today) {
+            this.currentPlaylist = this.generateDailyPlaylist();
+        }
+        
+        return this.currentPlaylist;
     }
 }
 
@@ -380,7 +370,7 @@ sacmTracker.init();
 const postsPersistence = new PostsPersistence();
 postsPersistence.init();
 
-const musicSystem = new SyncedMusicSystem();
+const dailyPlaylist = new DailyPlaylist(); // 🎵 Solo playlist, sin control de reproducción
 
 // Configuración de tipos MIME
 const mimeTypes = {
@@ -447,13 +437,6 @@ const server = http.createServer((req, res) => {
             res.writeHead(500);
             res.end('Error: ' + error.message);
         });
-        return;
-    }
-
-    // 🆕 ENDPOINT PARA OBTENER ESTADO DE MÚSICA
-    if (req.url === '/music-state' && req.method === 'GET') {
-        res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify(musicSystem.getMusicState()));
         return;
     }
     
@@ -717,37 +700,6 @@ function handleMessage(socket, data) {
             console.log('🎵 Reproducción completada:', data.songId, 'duración:', data.duration);
             sacmTracker.trackPlay(data.songId, data.userId, data.duration);
             break;
-        // 🆕 Comandos de música sincronizada
-        case 'music_command':
-            handleMusicCommand(socket, data);
-            break;
-    }
-}
-
-// 🆕 Manejar comandos de música
-function handleMusicCommand(socket, data) {
-    switch(data.command) {
-        case 'next':
-            musicSystem.nextTrack();
-            broadcast({
-                type: 'music_update',
-                musicState: musicSystem.getMusicState()
-            });
-            break;
-        case 'play':
-            musicSystem.isPlaying = true;
-            broadcast({
-                type: 'music_update',
-                musicState: musicSystem.getMusicState()
-            });
-            break;
-        case 'pause':
-            musicSystem.isPlaying = false;
-            broadcast({
-                type: 'music_update', 
-                musicState: musicSystem.getMusicState()
-            });
-            break;
     }
 }
 
@@ -760,7 +712,7 @@ wss.on('connection', (socket, req) => {
         type: 'welcome',
         message: 'Bienvenido a MESH TCSACM 🌟',
         posts: state.posts.slice(0, 200),
-        musicState: musicSystem.getMusicState() // 🆕 Incluir estado de música
+        dailyPlaylist: dailyPlaylist.getDailyPlaylist() // 🆕 Solo enviar playlist, NO control de reproducción
     }));
 
     socket.on('message', (message) => {
@@ -815,7 +767,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Servidor MESH ejecutándose en puerto ${PORT}`);
     console.log('🎵 Sistema de compositores ACTIVADO - Posts ilimitados para contenido musical');
     console.log('💾 Sistema de persistencia ACTIVADO - Posts importantes se guardan en Google Sheets');
-    console.log('🎵 Música sincronizada ACTIVADA - Playlist aleatoria diaria para todos');
+    console.log('🎵 Playlist diaria ACTIVADA - Lista aleatoria compartida, control individual');
     console.log('📊 Backup automático cada 3 minutos');
     console.log('🔧 Características:');
     console.log('   - Posts generales: 1 por día, duran 24h');
@@ -823,7 +775,7 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log('   - Colaboraciones: 30 días');
     console.log('   - Proyectos: 60 días');
     console.log('   - Eventos: Hasta la fecha del evento');
-    console.log('   - Música: Playlist aleatoria sincronizada');
+    console.log('   - Música: Playlist aleatoria diaria, control individual por usuario');
 });
 
 process.on('uncaughtException', (error) => {
