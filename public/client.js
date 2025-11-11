@@ -698,6 +698,7 @@ class MusicPlayer {
         this.currentTrackIndex = 0;
         this.audio = new Audio();
         this.isPlaying = false;
+        this.random = true
         this.trackStartTime = 0;
         this.currentTrackName = '';
     }
